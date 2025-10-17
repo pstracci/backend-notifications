@@ -146,12 +146,14 @@ app.post('/api/test-notification', async (req, res) => {
       notification: {
         title: '🧪 Notificação de Teste',
         body: 'Esta é uma notificação de teste do backend!'
-      },
-      tokens: tokens,
+      }
     };
 
     console.log('Enviando notificação via Firebase...');
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEachForMulticast({
+      ...message,
+      tokens: tokens
+    });
     
     console.log(`✅ Sucesso: ${response.successCount} notificações enviadas`);
     console.log(`❌ Falhas: ${response.failureCount}`);
@@ -204,10 +206,12 @@ cron.schedule('*/15 * * * *', async () => {
           notification: {
             title: 'Alerta de Chuva! ☔️',
             body: 'Chuva se aproximando da sua região. Prepare-se!'
-          },
-          tokens: tokens,
+          }
         };
-        const response = await admin.messaging().sendMulticast(message);
+        const response = await admin.messaging().sendEachForMulticast({
+          ...message,
+          tokens: tokens
+        });
         console.log(`✅ Notificações enviadas com sucesso: ${response.successCount}`);
         if (response.failureCount > 0) {
           console.log(`❌ Falhas ao enviar: ${response.failureCount}`);
