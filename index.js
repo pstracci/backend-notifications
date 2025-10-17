@@ -1,60 +1,27 @@
 // index.js
 
 const express = require('express');
+const path = require('path');
 const cron = require('node-cron');
-const admin = require('./firebase-config'); // Importa a config do Firebase
-const db = require('./db'); // Importa nosso novo módulo de banco de dados
+const admin = require('./firebase-config');
+const db = require('./db');
 const authMiddleware = require('./authMiddleware');
+const updateBackgroundLocation = require('./backgroundLocation');
+const adminRoutes = require('./adminRoutes');
 
 const app = express();
-app.use(express.json()); // Middleware para ler o corpo de requisições JSON
 
-// --- ENDPOINTS DA API ---
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-/**
- * Endpoint de Autenticação
- * Recebe um token do Firebase do cliente, verifica, e cria um registro de usuário no banco se não existir.
- */
+// Rotas de administração
+app.use(adminRoutes);
+
+// --- ROTAS DA API ---
+
+// Rota para autenticação
 app.post('/api/auth/verify', async (req, res) => {
-	
-	app.put('/api/users/location', authMiddleware, async (req, res) => {
-  // O UID vem do middleware, garantindo que o usuário só pode atualizar seus próprios dados.
-  const { uid } = req.user;
-  const { latitude, longitude } = req.body;
-
-  // Validação simples dos dados recebidos
-  if (latitude === undefined || longitude === undefined) {
-    return res.status(400).send({ error: 'Latitude e Longitude são obrigatórias.' });
-  }
-
-  try {
-    console.log(`Atualizando localização para o UID ${uid}: Lat ${latitude}, Lon ${longitude}`);
-
-    const updateUserLocationQuery = `
-      UPDATE users 
-      SET 
-        latitude = $1, 
-        longitude = $2, 
-        location_updated_at = NOW() 
-      WHERE uid = $3 
-      RETURNING id, uid, latitude, longitude, location_updated_at;
-    `;
-
-    const { rows } = await db.query(updateUserLocationQuery, [latitude, longitude, uid]);
-
-    if (rows.length === 0) {
-      // Isso não deveria acontecer se o usuário passou pela verificação de auth
-      return res.status(404).send({ error: 'Usuário não encontrado no banco de dados.' });
-    }
-
-    res.status(200).send({ success: true, user: rows[0] });
-
-  } catch (error) {
-    console.error(`Erro ao atualizar localização para o UID ${uid}:`, error);
-    res.status(500).send({ error: 'Falha ao atualizar a localização.' });
-  }
-});
-
   const { token } = req.body;
 
   if (!token) {
@@ -96,8 +63,46 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
+// Rota para atualização de localização em background
+app.post('/api/background/location', authMiddleware, updateBackgroundLocation);
 
-// Endpoint para o app Flutter/iOS/Android registrar o token de notificação
+// Rota para atualização manual de localização (mantida para compatibilidade)
+app.put('/api/users/location', authMiddleware, async (req, res) => {
+  const { uid } = req.user;
+  const { latitude, longitude } = req.body;
+
+  if (latitude === undefined || longitude === undefined) {
+    return res.status(400).send({ error: 'Latitude e Longitude são obrigatórias.' });
+  }
+
+  try {
+    console.log(`Atualizando localização para o UID ${uid}: Lat ${latitude}, Lon ${longitude}`);
+
+    const updateUserLocationQuery = `
+      UPDATE users 
+      SET 
+        latitude = $1, 
+        longitude = $2, 
+        location_updated_at = NOW() 
+      WHERE uid = $3 
+      RETURNING id, uid, latitude, longitude, location_updated_at;
+    `;
+
+    const { rows } = await db.query(updateUserLocationQuery, [latitude, longitude, uid]);
+
+    if (rows.length === 0) {
+      return res.status(404).send({ error: 'Usuário não encontrado no banco de dados.' });
+    }
+
+    res.status(200).send({ success: true, user: rows[0] });
+
+  } catch (error) {
+    console.error(`Erro ao atualizar localização para o UID ${uid}:`, error);
+    res.status(500).send({ error: 'Falha ao atualizar a localização.' });
+  }
+});
+
+// Endpoint para registro de dispositivos
 app.post('/register-device', async (req, res) => {
   const { token } = req.body;
   if (!token) {
@@ -114,7 +119,6 @@ app.post('/register-device', async (req, res) => {
     res.status(500).send({ error: 'Falha ao registrar dispositivo.' });
   }
 });
-
 
 // --- LÓGICA DO AGENDADOR (CRON JOB) ---
 cron.schedule('*/15 * * * *', async () => {
@@ -137,10 +141,10 @@ cron.schedule('*/15 * * * *', async () => {
         const response = await admin.messaging().sendMulticast(message);
         console.log(`Notificações enviadas com sucesso: ${response.successCount}`);
         if (response.failureCount > 0) {
-            console.log(`Falhas ao enviar: ${response.failureCount}`);
+          console.log(`Falhas ao enviar: ${response.failureCount}`);
         }
       } else {
-          console.log('Nenhum dispositivo registrado para receber notificações.');
+        console.log('Nenhum dispositivo registrado para receber notificações.');
       }
     } catch (error) {
       console.error('Erro ao buscar tokens ou enviar notificações:', error);
@@ -151,8 +155,8 @@ cron.schedule('*/15 * * * *', async () => {
 });
 
 async function verificaClima() {
-    console.log('Na função verificaClima, retornando "true" para fins de teste.');
-    return true;
+  console.log('Na função verificaClima, retornando "true" para fins de teste.');
+  return true;
 }
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
