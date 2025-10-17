@@ -15,12 +15,12 @@ const authMiddleware = async (req, res, next) => {
   try {
     // Verifica o token usando o Firebase Admin
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-
+    
     // Anexa o UID do usuário ao objeto 'req' para que possamos usá-lo no endpoint
     req.user = {
       uid: decodedToken.uid
     };
-
+    
     // Passa para o próximo passo (o nosso endpoint)
     next();
   } catch (error) {
