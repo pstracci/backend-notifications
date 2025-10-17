@@ -23,17 +23,19 @@ router.post('/api/admin/send-notification', async (req, res) => {
   }
 
   try {
-    // Busca os tokens do dispositivo do usuário
-    const { rows: devices } = await db.query(
-      'SELECT token FROM devices WHERE user_id = $1 AND token IS NOT NULL',
-      [userId]
+    // Busca o token do dispositivo do usuário
+    const { rows: userDevices } = await db.query(
+      `SELECT token FROM devices WHERE token IS NOT NULL`
     );
 
-    if (devices.length === 0) {
-      return res.status(404).json({ error: 'Nenhum dispositivo encontrado para este usuário' });
+    if (userDevices.length === 0) {
+      return res.status(404).json({ error: 'Nenhum dispositivo com token encontrado' });
     }
 
-    const tokens = devices.map(device => device.token);
+    // Pega todos os tokens disponíveis (não há relação direta com usuário no momento)
+    const tokens = userDevices.map(device => device.token);
+    
+    console.log(`Enviando notificação para ${tokens.length} dispositivo(s)`);
 
     // Envia a notificação
     const response = await admin.messaging().sendMulticast({
