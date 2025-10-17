@@ -8,6 +8,8 @@ const db = require('./db');
 const authMiddleware = require('./authMiddleware');
 const updateBackgroundLocation = require('./backgroundLocation');
 const adminRoutes = require('./adminRoutes');
+const weatherService = require('./weatherService');
+const notificationService = require('./notificationService');
 
 const app = express();
 
@@ -192,50 +194,68 @@ app.post('/api/test-notification', async (req, res) => {
 });
 
 // --- LÓGICA DO AGENDADOR (CRON JOB) ---
-cron.schedule('*/15 * * * *', async () => {
-  console.log('Executando verificação de chuva agendada...');
-  const vaiChover = await verificaClima(); 
-  if (vaiChover) {
-    console.log('Condição de chuva detectada! Buscando tokens para notificar...');
-    try {
-      const { rows } = await db.query('SELECT token FROM devices WHERE token IS NOT NULL');
-      const tokens = rows.map(row => row.token);
-      if (tokens.length > 0) {
-        console.log(`Enviando notificações para ${tokens.length} dispositivo(s)`);
-        const message = {
-          notification: {
-            title: 'Alerta de Chuva! ☔️',
-            body: 'Chuva se aproximando da sua região. Prepare-se!'
-          }
-        };
-        const response = await admin.messaging().sendEachForMulticast({
-          ...message,
-          tokens: tokens
-        });
-        console.log(`✅ Notificações enviadas com sucesso: ${response.successCount}`);
-        if (response.failureCount > 0) {
-          console.log(`❌ Falhas ao enviar: ${response.failureCount}`);
-          response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-              console.error(`Erro no token ${idx + 1}:`, resp.error?.code, resp.error?.message);
-            }
-          });
-        }
-      } else {
-        console.log('Nenhum dispositivo registrado para receber notificações.');
-      }
-    } catch (error) {
-      console.error('Erro ao buscar tokens ou enviar notificações:', error);
+// Executa a cada 10 minutos
+cron.schedule('*/10 * * * *', async () => {
+  console.log('\n========================================');
+  console.log('🔍 Executando verificação de chuva agendada...');
+  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('========================================\n');
+  
+  try {
+    // 1. Verificar previsão de chuva para todas as localizações únicas
+    const forecasts = await weatherService.checkRainForAllLocations(db);
+    
+    if (forecasts.length === 0) {
+      console.log('✅ Sem previsão de chuva significativa para nenhuma localização.');
+      return;
     }
-  } else {
-    console.log('Sem previsão de chuva no momento.');
+    
+    console.log(`\n⚠️ Chuva detectada em ${forecasts.length} localização(ões)!\n`);
+    
+    // 2. Processar previsões e enviar notificações
+    const summary = await notificationService.processRainForecasts(db, forecasts);
+    
+    console.log('\n========================================');
+    console.log('✅ Verificação concluída!');
+    console.log('========================================\n');
+    
+  } catch (error) {
+    console.error('\n❌ ERRO durante verificação de chuva:', error);
+    console.error('Stack trace:', error.stack);
   }
 });
 
-async function verificaClima() {
-  console.log('Na função verificaClima, retornando "true" para fins de teste.');
-  return true;
-}
+// Endpoint manual para testar verificação de chuva
+app.post('/api/check-rain-now', async (req, res) => {
+  console.log('\n=== VERIFICAÇÃO MANUAL DE CHUVA INICIADA ===\n');
+  
+  try {
+    const forecasts = await weatherService.checkRainForAllLocations(db);
+    
+    if (forecasts.length === 0) {
+      return res.status(200).send({
+        success: true,
+        message: 'Sem previsão de chuva significativa',
+        forecasts: []
+      });
+    }
+    
+    const summary = await notificationService.processRainForecasts(db, forecasts);
+    
+    res.status(200).send({
+      success: true,
+      message: 'Verificação concluída',
+      summary: summary
+    });
+    
+  } catch (error) {
+    console.error('Erro na verificação manual:', error);
+    res.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
