@@ -257,6 +257,35 @@ app.post('/api/check-rain-now', async (req, res) => {
   }
 });
 
+// Endpoint para verificar status do rate limiter
+app.get('/api/rate-limit-status', (req, res) => {
+  try {
+    const stats = weatherService.getRateLimiterStats();
+    
+    res.status(200).send({
+      success: true,
+      limits: {
+        perSecond: { max: 3, description: '3 requisições por segundo' },
+        perHour: { max: 25, description: '25 requisições por hora' },
+        perDay: { max: 500, description: '500 requisições por dia' }
+      },
+      current: stats,
+      warnings: [
+        stats.perDay.percentage >= 90 ? '⚠️ Limite diário quase atingido!' : null,
+        stats.perHour.percentage >= 90 ? '⚠️ Limite por hora quase atingido!' : null,
+        stats.perSecond.percentage >= 90 ? '⚠️ Limite por segundo quase atingido!' : null
+      ].filter(w => w !== null)
+    });
+    
+  } catch (error) {
+    console.error('Erro ao obter status do rate limiter:', error);
+    res.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 

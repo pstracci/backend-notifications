@@ -2,6 +2,7 @@
 // Serviço para consultar a API do Tomorrow.io e obter previsões de precipitação
 
 const axios = require('axios');
+const rateLimiter = require('./rateLimiter');
 
 const TOMORROW_API_KEY = 'vVizCi26cu5mljLrkFFvQxEg6V1OBNqF';
 const TOMORROW_API_URL = 'https://api.tomorrow.io/v4/timelines';
@@ -42,6 +43,20 @@ function getRainIntensityLevel(precipitationIntensity) {
  */
 async function getWeatherForecast(latitude, longitude) {
   try {
+    // Verificar se pode fazer requisição
+    const check = rateLimiter.canMakeRequest();
+    if (!check.allowed) {
+      console.warn(`⚠️ Rate limit atingido: ${check.reason}`);
+      console.warn(`   Aguardando ${Math.ceil(check.waitTime / 1000)}s...`);
+      
+      // Aguardar até que seja possível fazer a requisição
+      const canProceed = await rateLimiter.waitUntilAllowed(check.waitTime + 1000);
+      if (!canProceed) {
+        console.error('❌ Não foi possível fazer requisição devido ao rate limit');
+        return null;
+      }
+    }
+    
     const params = {
       location: `${latitude},${longitude}`,
       fields: ['precipitationIntensity', 'precipitationProbability'],
@@ -51,6 +66,9 @@ async function getWeatherForecast(latitude, longitude) {
     };
 
     console.log(`Consultando previsão para: ${latitude}, ${longitude}`);
+    
+    // Registrar requisição
+    rateLimiter.recordRequest();
     
     const response = await axios.get(TOMORROW_API_URL, { params });
     
@@ -154,10 +172,38 @@ async function checkRainForAllLocations(db) {
 
   console.log(`Verificando previsão para ${locations.length} localizações...`);
   
-  const forecasts = [];
+  // Verificar limites antes de começar
+  const stats = rateLimiter.getStats();
+  console.log('\n📊 Status do Rate Limiter:');
+  console.log(`   Por segundo: ${stats.perSecond.current}/${stats.perSecond.limit} (${stats.perSecond.percentage}%)`);
+  console.log(`   Por hora: ${stats.perHour.current}/${stats.perHour.limit} (${stats.perHour.percentage}%)`);
+  console.log(`   Por dia: ${stats.perDay.current}/${stats.perDay.limit} (${stats.perDay.percentage}%)\n`);
   
-  // Processar localizações em lotes para evitar sobrecarga da API
-  for (const location of locations) {
+  const maxAllowed = rateLimiter.getMaxAllowedRequests();
+  if (maxAllowed === 0) {
+    console.error('❌ Limite de requisições da API atingido. Não é possível fazer mais consultas no momento.');
+    return [];
+  }
+  
+  if (locations.length > maxAllowed) {
+    console.warn(`⚠️ ATENÇÃO: ${locations.length} localizações encontradas, mas apenas ${maxAllowed} requisições disponíveis.`);
+    console.warn(`   Processando apenas as ${maxAllowed} primeiras localizações (ordenadas por número de usuários).`);
+  }
+  
+  // Calcular delay ideal entre requisições
+  const locationsToProcess = Math.min(locations.length, maxAllowed);
+  const optimalDelay = rateLimiter.calculateOptimalDelay(locationsToProcess);
+  console.log(`⏱️ Delay calculado entre requisições: ${optimalDelay}ms\n`);
+  
+  const forecasts = [];
+  let processedCount = 0;
+  
+  // Processar localizações respeitando os limites
+  for (let i = 0; i < locationsToProcess; i++) {
+    const location = locations[i];
+    
+    console.log(`[${i + 1}/${locationsToProcess}] Processando ${location.latitude}, ${location.longitude} (${location.userCount} usuários)`);
+    
     const forecast = await getWeatherForecast(location.latitude, location.longitude);
     
     if (forecast && forecast.shouldNotify) {
@@ -167,12 +213,29 @@ async function checkRainForAllLocations(db) {
         userCount: location.userCount
       });
       
-      console.log(`⚠️ Chuva detectada em ${location.latitude}, ${location.longitude}: ${forecast.intensityLevel} (${forecast.maxPrecipitation.toFixed(2)} mm/h)`);
+      console.log(`   ⚠️ Chuva detectada: ${forecast.intensityLevel} (${forecast.maxPrecipitation.toFixed(2)} mm/h)`);
+    } else if (forecast) {
+      console.log(`   ✅ Sem chuva significativa`);
+    } else {
+      console.log(`   ❌ Erro ao consultar previsão`);
     }
     
-    // Pequeno delay para não sobrecarregar a API
-    await new Promise(resolve => setTimeout(resolve, 500));
+    processedCount++;
+    
+    // Aguardar delay entre requisições (exceto na última)
+    if (i < locationsToProcess - 1) {
+      await new Promise(resolve => setTimeout(resolve, optimalDelay));
+    }
   }
+  
+  console.log(`\n✅ Processamento concluído: ${processedCount}/${locations.length} localizações verificadas`);
+  console.log(`   Localizações com chuva: ${forecasts.length}`);
+  
+  // Mostrar estatísticas finais
+  const finalStats = rateLimiter.getStats();
+  console.log('\n📊 Status Final do Rate Limiter:');
+  console.log(`   Por hora: ${finalStats.perHour.current}/${finalStats.perHour.limit} (${finalStats.perHour.percentage}%)`);
+  console.log(`   Por dia: ${finalStats.perDay.current}/${finalStats.perDay.limit} (${finalStats.perDay.percentage}%)`);
 
   return forecasts;
 }
@@ -182,5 +245,6 @@ module.exports = {
   getRainIntensityLevel,
   getWeatherForecast,
   getUniqueLocations,
-  checkRainForAllLocations
+  checkRainForAllLocations,
+  getRateLimiterStats: () => rateLimiter.getStats()
 };
