@@ -10,6 +10,53 @@ app.use(express.json()); // Middleware para ler o corpo de requisições JSON
 
 // --- ENDPOINTS DA API ---
 
+/**
+ * Endpoint de Autenticação
+ * Recebe um token do Firebase do cliente, verifica, e cria um registro de usuário no banco se não existir.
+ */
+app.post('/api/auth/verify', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).send({ error: 'Token de autenticação não fornecido.' });
+  }
+
+  try {
+    // 1. Verifica se o token recebido é válido usando o Firebase Admin SDK
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    console.log(`Token verificado com sucesso para o UID: ${uid}`);
+
+    // 2. Verifica se o usuário já existe no nosso banco de dados
+    const findUserQuery = 'SELECT * FROM users WHERE uid = $1';
+    const { rows } = await db.query(findUserQuery, [uid]);
+
+    let user;
+
+    if (rows.length === 0) {
+      // 3. Se o usuário NÃO existe, cria um novo registro
+      console.log(`Usuário com UID ${uid} não encontrado. Criando novo registro.`);
+      const insertUserQuery = 'INSERT INTO users (uid) VALUES ($1) RETURNING *';
+      const newUserResult = await db.query(insertUserQuery, [uid]);
+      user = newUserResult.rows[0];
+    } else {
+      // 4. Se o usuário JÁ existe, apenas o seleciona
+      console.log(`Usuário com UID ${uid} já existe no banco de dados.`);
+      user = rows[0];
+    }
+    
+    // 5. Retorna uma resposta de sucesso com os dados do usuário do nosso banco
+    res.status(200).send({ success: true, user: user });
+
+  } catch (error) {
+    console.error('Erro ao verificar token ou ao processar usuário:', error);
+    // O token pode ser inválido ou expirado
+    res.status(403).send({ error: 'Falha na autenticação. Token inválido.' });
+  }
+});
+
+
 // Endpoint para o app Flutter/iOS/Android registrar o token de notificação
 app.post('/register-device', async (req, res) => {
   const { token } = req.body;
@@ -18,10 +65,8 @@ app.post('/register-device', async (req, res) => {
   }
 
   try {
-    // Usa nosso módulo 'db' para inserir o token no banco, evitando duplicatas
     const queryText = 'INSERT INTO devices (token) VALUES ($1) ON CONFLICT (token) DO NOTHING';
     await db.query(queryText, [token]);
-
     console.log(`Token registrado ou já existente: ${token.substring(0, 20)}...`);
     res.status(200).send({ success: true });
   } catch (error) {
@@ -30,21 +75,16 @@ app.post('/register-device', async (req, res) => {
   }
 });
 
-// --- LÓGICA DO AGENDADOR (CRON JOB) ---
 
-// Roda a cada 15 minutos: '*/15 * * * *'
+// --- LÓGICA DO AGENDADOR (CRON JOB) ---
 cron.schedule('*/15 * * * *', async () => {
   console.log('Executando verificação de chuva agendada...');
-
-  // 1. Chame suas APIs de clima aqui
-  const vaiChover = await verificaClima(); // Função que você implementa
-
+  const vaiChover = await verificaClima(); 
   if (vaiChover) {
     console.log('Condição de chuva detectada! Buscando tokens para notificar...');
     try {
       const { rows } = await db.query('SELECT token FROM devices');
       const tokens = rows.map(row => row.token);
-
       if (tokens.length > 0) {
         console.log(`Enviando notificações para ${tokens.length} dispositivo(s).`);
         const message = {
@@ -52,15 +92,12 @@ cron.schedule('*/15 * * * *', async () => {
             title: 'Alerta de Chuva! ☔️',
             body: 'Chuva se aproximando da sua região. Prepare-se!'
           },
-          tokens: tokens, // Envia para múltiplos dispositivos de uma vez
+          tokens: tokens,
         };
-
         const response = await admin.messaging().sendMulticast(message);
         console.log(`Notificações enviadas com sucesso: ${response.successCount}`);
-        
         if (response.failureCount > 0) {
             console.log(`Falhas ao enviar: ${response.failureCount}`);
-            // Aqui você poderia adicionar uma lógica para remover tokens inválidos do banco de dados
         }
       } else {
           console.log('Nenhum dispositivo registrado para receber notificações.');
@@ -73,25 +110,16 @@ cron.schedule('*/15 * * * *', async () => {
   }
 });
 
-// Função placeholder para a lógica de verificação do clima
 async function verificaClima() {
-    //
-    // SUA LÓGICA PARA CHAMAR AS APIS DE CLIMA (EX: OPENWEATHERMAP) VAI AQUI
-    // E DEVE USAR A LOCALIZAÇÃO DOS USUÁRIOS
-    //
-    // Por enquanto, vamos retornar 'true' para forçar o envio da notificação nos testes.
     console.log('Na função verificaClima, retornando "true" para fins de teste.');
     return true;
 }
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
-
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, async () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  
-  // Teste de conexão com o banco de dados na inicialização
   try {
     const result = await db.query('SELECT NOW()');
     console.log('✅ Conexão com o banco de dados PostgreSQL bem-sucedida!');
