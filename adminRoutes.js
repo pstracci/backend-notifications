@@ -48,39 +48,68 @@ router.post('/api/admin/send-notification', async (req, res) => {
 
     // Envia as notificações
     try {
+      console.log('Tokens encontrados:', tokens);
+      
       // Cria uma mensagem para cada token
-      const messages = tokens.map(token => ({
-        token: token,
-        notification: {
-          title: title,
-          body: message
-        },
-        android: {
-          priority: 'high'
-        },
-        apns: {
-          payload: {
-            aps: {
-              contentAvailable: true,
-              priority: 'high'
+      const messages = tokens.map(token => {
+        const messageObj = {
+          token: token,
+          notification: {
+            title: title,
+            body: message
+          },
+          data: {
+            type: 'admin_notification',
+            timestamp: new Date().toISOString()
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              sound: 'default',
+              tag: 'admin_notification'
+            }
+          },
+          apns: {
+            payload: {
+              aps: {
+                alert: {
+                  title: title,
+                  body: message
+                },
+                sound: 'default',
+                badge: 1
+              }
             }
           }
-        }
-      }));
+        };
+        
+        console.log('Mensagem a ser enviada:', JSON.stringify(messageObj, null, 2));
+        return messageObj;
+      });
 
       // Envia cada mensagem individualmente
-      const sendPromises = messages.map(message => 
-        admin.messaging().send(message)
-          .then(() => ({ success: true }))
-          .catch(error => ({
+      const sendPromises = messages.map(async (message, index) => {
+        try {
+          console.log(`Enviando mensagem ${index + 1}/${messages.length} para token: ${message.token.substring(0, 10)}...`);
+          const response = await admin.messaging().send(message);
+          console.log(`Mensagem ${index + 1} enviada com sucesso:`, response);
+          return { success: true, messageId: response };
+        } catch (error) {
+          console.error(`Erro ao enviar mensagem ${index + 1}:`, error);
+          return {
             success: false,
-            error: error.message || 'Erro desconhecido'
-          }))
-      );
+            error: error.message || 'Erro desconhecido',
+            code: error.code,
+            details: error.details
+          };
+        }
+      });
 
       const results = await Promise.all(sendPromises);
       const successCount = results.filter(r => r.success).length;
       const failureCount = results.length - successCount;
+      
+      console.log(`Resultado do envio: ${successCount} sucesso(s), ${failureCount} falha(s)`);
       
       res.json({
         success: true,
@@ -89,8 +118,12 @@ router.post('/api/admin/send-notification', async (req, res) => {
         results: results
       });
     } catch (error) {
-      console.error('Erro ao enviar notificação:', error);
-      throw error; // Re-throw para ser capturado pelo catch externo
+      console.error('Erro ao processar envio de notificações:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      throw error;
     }
   } catch (error) {
     console.error('Erro ao enviar notificação:', error);

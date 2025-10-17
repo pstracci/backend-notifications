@@ -120,6 +120,75 @@ app.post('/register-device', async (req, res) => {
   }
 });
 
+// Endpoint para enviar notificação de teste
+app.post('/api/test-notification', async (req, res) => {
+  try {
+    console.log('=== INICIANDO TESTE DE NOTIFICAÇÃO ===');
+    
+    const { rows } = await db.query('SELECT token FROM devices WHERE token IS NOT NULL');
+    const tokens = rows.map(row => row.token);
+    
+    console.log(`Total de tokens encontrados: ${tokens.length}`);
+    
+    if (tokens.length === 0) {
+      return res.status(404).send({ 
+        error: 'Nenhum dispositivo registrado.',
+        tokens_count: 0
+      });
+    }
+
+    // Log dos primeiros caracteres de cada token
+    tokens.forEach((token, index) => {
+      console.log(`Token ${index + 1}: ${token.substring(0, 30)}...`);
+    });
+
+    const message = {
+      notification: {
+        title: '🧪 Notificação de Teste',
+        body: 'Esta é uma notificação de teste do backend!'
+      },
+      tokens: tokens,
+    };
+
+    console.log('Enviando notificação via Firebase...');
+    const response = await admin.messaging().sendMulticast(message);
+    
+    console.log(`✅ Sucesso: ${response.successCount} notificações enviadas`);
+    console.log(`❌ Falhas: ${response.failureCount}`);
+    
+    // Log detalhado de falhas
+    if (response.failureCount > 0) {
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          console.error(`Erro no token ${idx + 1}:`, resp.error?.code, resp.error?.message);
+        }
+      });
+    }
+
+    res.status(200).send({ 
+      success: true,
+      total_tokens: tokens.length,
+      success_count: response.successCount,
+      failure_count: response.failureCount,
+      details: response.responses.map((resp, idx) => ({
+        token_preview: tokens[idx].substring(0, 20) + '...',
+        success: resp.success,
+        error: resp.error ? {
+          code: resp.error.code,
+          message: resp.error.message
+        } : null
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ ERRO ao enviar notificação de teste:', error);
+    res.status(500).send({ 
+      error: 'Falha ao enviar notificação de teste.',
+      details: error.message
+    });
+  }
+});
+
 // --- LÓGICA DO AGENDADOR (CRON JOB) ---
 cron.schedule('*/15 * * * *', async () => {
   console.log('Executando verificação de chuva agendada...');
@@ -127,10 +196,10 @@ cron.schedule('*/15 * * * *', async () => {
   if (vaiChover) {
     console.log('Condição de chuva detectada! Buscando tokens para notificar...');
     try {
-      const { rows } = await db.query('SELECT token FROM devices');
+      const { rows } = await db.query('SELECT token FROM devices WHERE token IS NOT NULL');
       const tokens = rows.map(row => row.token);
       if (tokens.length > 0) {
-        console.log(`Enviando notificações para ${tokens.length} dispositivo(s).`);
+        console.log(`Enviando notificações para ${tokens.length} dispositivo(s)`);
         const message = {
           notification: {
             title: 'Alerta de Chuva! ☔️',
@@ -139,9 +208,14 @@ cron.schedule('*/15 * * * *', async () => {
           tokens: tokens,
         };
         const response = await admin.messaging().sendMulticast(message);
-        console.log(`Notificações enviadas com sucesso: ${response.successCount}`);
+        console.log(`✅ Notificações enviadas com sucesso: ${response.successCount}`);
         if (response.failureCount > 0) {
-          console.log(`Falhas ao enviar: ${response.failureCount}`);
+          console.log(`❌ Falhas ao enviar: ${response.failureCount}`);
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              console.error(`Erro no token ${idx + 1}:`, resp.error?.code, resp.error?.message);
+            }
+          });
         }
       } else {
         console.log('Nenhum dispositivo registrado para receber notificações.');
