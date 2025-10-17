@@ -1,1 +1,8 @@
-node_modules/
+# Ignorar o arquivo de credenciais do Firebase
+backend-notifications-b1b5d-firebase-adminsdk-fbsvc-2088b539df.json
+
+# Ignorar variáveis de ambiente locais
+.env
+
+# Ignorar pasta de dependências do Node.js
+node_modules
