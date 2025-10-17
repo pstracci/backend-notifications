@@ -14,7 +14,7 @@ function getNotificationConfig(intensityLevel, precipitation) {
     light: {
       title: '🌦️ Chuva Fraca se Aproximando',
       body: `Chuva leve prevista nos próximos 30 minutos (${precipitation.toFixed(1)} mm/h). Leve um guarda-chuva!`,
-      priority: 'default',
+      priority: 'normal',
       // Vibração: padrão curto [duração, pausa, duração]
       vibrationPattern: [200, 100, 200],
       sound: 'default'
@@ -108,7 +108,6 @@ async function sendRainNotification(tokens, intensityLevel, precipitation, locat
         priority: config.priority,
         notification: {
           channelId: 'rain_alerts',
-          priority: config.priority,
           defaultSound: true,
           defaultVibrateTimings: false,
           vibrateTimingsMillis: config.vibrationPattern,
