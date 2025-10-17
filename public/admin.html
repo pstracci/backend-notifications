@@ -3,23 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Notificações</title>
+    <title>🌧️ Painel Admin - Notificações de Chuva</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { padding: 20px; }
-        .user-card { cursor: pointer; transition: all 0.3s; }
-        .user-card:hover { background-color: #f8f9fa; }
-        .user-card.selected { background-color: #e9ecef; }
+        :root {
+            --light-rain: #6c757d;
+            --moderate-rain: #0d6efd;
+            --heavy-rain: #fd7e14;
+            --extreme-rain: #dc3545;
+        }
+        body { 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; }
+        .user-card { 
+            cursor: pointer; 
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        .user-card:hover { 
+            background-color: #f8f9fa;
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+        .user-card.selected { 
+            background-color: #e7f1ff;
+            border-left-color: #0d6efd;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
         #notificationForm { display: none; margin-top: 20px; }
+        .intensity-btn {
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .intensity-btn:hover {
+            transform: scale(1.05);
+        }
+        .intensity-btn.active {
+            border-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .preview-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .card-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border: none;
+        }
+        .badge-intensity {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="mb-4">Painel de Notificações</h1>
+        <div class="text-center mb-5">
+            <h1 class="display-4 text-white fw-bold mb-2">🌧️ Painel Admin</h1>
+            <p class="text-white-50 fs-5">Sistema de Notificações de Chuva</p>
+        </div>
         
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Lista de Usuários</h5>
+        <!-- Estatísticas -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="stats-card text-center">
+                    <div class="fs-1 mb-2">👥</div>
+                    <h3 id="totalUsers" class="mb-1">-</h3>
+                    <p class="text-muted mb-0">Usuários Cadastrados</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card text-center">
+                    <div class="fs-1 mb-2">📱</div>
+                    <h3 id="totalDevices" class="mb-1">-</h3>
+                    <p class="text-muted mb-0">Dispositivos Ativos</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card text-center">
+                    <div class="fs-1 mb-2">🔔</div>
+                    <h3 id="totalNotifications" class="mb-1">0</h3>
+                    <p class="text-muted mb-0">Notificações Enviadas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-card mb-4">
+            <div class="card-header-custom">
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Lista de Usuários</h5>
             </div>
             <div class="card-body">
                 <div id="loadingUsers" class="text-center py-3">
@@ -34,28 +130,93 @@
             </div>
         </div>
 
-        <div id="notificationForm" class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Enviar Notificação</h5>
+        <div id="notificationForm" class="main-card">
+            <div class="card-header-custom">
+                <h5 class="mb-0"><i class="bi bi-send-fill"></i> Enviar Notificação de Teste</h5>
             </div>
-            <div class="card-body">
-                <div id="selectedUserInfo" class="mb-3">
-                    <strong>Usuário selecionado:</strong> 
-                    <span id="selectedUserName">Nenhum usuário selecionado</span>
+            <div class="card-body p-4">
+                <div class="alert alert-info mb-4">
+                    <strong>👤 Usuário selecionado:</strong> 
+                    <span id="selectedUserName" class="fw-bold">Nenhum usuário selecionado</span>
                 </div>
+                
                 <form id="sendNotificationForm">
                     <input type="hidden" id="userId" name="userId">
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Título</label>
-                        <input type="text" class="form-control" id="title" required>
+                    
+                    <!-- Seleção de Intensidade -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">🌧️ Intensidade da Chuva</label>
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <button type="button" class="btn btn-secondary w-100 intensity-btn" data-intensity="light">
+                                    <div class="fs-3">🌦️</div>
+                                    <div class="small">Leve</div>
+                                    <div class="x-small text-white-50">0.5-2.5 mm/h</div>
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <button type="button" class="btn btn-primary w-100 intensity-btn" data-intensity="moderate">
+                                    <div class="fs-3">🌧️</div>
+                                    <div class="small">Moderada</div>
+                                    <div class="x-small text-white-50">2.5-10 mm/h</div>
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <button type="button" class="btn btn-warning w-100 intensity-btn" data-intensity="heavy">
+                                    <div class="fs-3">⛈️</div>
+                                    <div class="small">Forte</div>
+                                    <div class="x-small text-white-50">10-50 mm/h</div>
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <button type="button" class="btn btn-danger w-100 intensity-btn" data-intensity="extreme">
+                                    <div class="fs-3">🚨</div>
+                                    <div class="small">Extrema</div>
+                                    <div class="x-small text-white-50">&gt;50 mm/h</div>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="intensity" name="intensity" value="moderate">
                     </div>
-                    <div class="mb-3">
-                        <label for="message" class="form-label">Mensagem</label>
-                        <textarea class="form-control" id="message" rows="3" required></textarea>
+
+                    <!-- Preview da Notificação -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">📱 Preview da Notificação</label>
+                        <div class="preview-card">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3 fs-2" id="previewIcon">🌧️</div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold" id="previewTitle">Chuva Moderada se Aproximando</h6>
+                                    <p class="mb-0 small" id="previewBody">Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">
-                        <span id="submitBtnText">Enviar Notificação</span>
-                        <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+
+                    <!-- Opções Avançadas (Opcional) -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="customMessage">
+                            <label class="form-check-label" for="customMessage">
+                                ✏️ Personalizar mensagem
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customMessageFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Título Personalizado</label>
+                            <input type="text" class="form-control" id="title" placeholder="Ex: Alerta de Chuva">
+                        </div>
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Mensagem Personalizada</label>
+                            <textarea class="form-control" id="message" rows="3" placeholder="Ex: Chuva forte prevista para sua região..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-lg btn-success w-100">
+                        <span id="submitBtnText">🚀 Enviar Notificação de Teste</span>
+                        <span id="submitSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
                     </button>
                 </form>
             </div>
@@ -78,8 +239,62 @@
             const submitBtnText = document.getElementById('submitBtnText');
             const submitSpinner = document.getElementById('submitSpinner');
             const alertContainer = document.getElementById('alertContainer');
+            const intensityInput = document.getElementById('intensity');
+            const previewIcon = document.getElementById('previewIcon');
+            const previewTitle = document.getElementById('previewTitle');
+            const previewBody = document.getElementById('previewBody');
+            const customMessageCheckbox = document.getElementById('customMessage');
+            const customMessageFields = document.getElementById('customMessageFields');
 
             let users = [];
+            let selectedIntensity = 'moderate';
+            let notificationsSent = 0;
+
+            // Configurações de notificação por intensidade
+            const notificationConfigs = {
+                light: {
+                    icon: '🌦️',
+                    title: 'Chuva Fraca se Aproximando',
+                    body: 'Chuva leve prevista nos próximos 30 minutos (1.5 mm/h). Leve um guarda-chuva!',
+                    precipitation: 1.5
+                },
+                moderate: {
+                    icon: '🌧️',
+                    title: 'Chuva Moderada se Aproximando',
+                    body: 'Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!',
+                    precipitation: 5.0
+                },
+                heavy: {
+                    icon: '⛈️',
+                    title: 'CHUVA FORTE se Aproximando!',
+                    body: 'ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (25.0 mm/h). Busque abrigo!',
+                    precipitation: 25.0
+                },
+                extreme: {
+                    icon: '🚨',
+                    title: 'ALERTA: CHUVA EXTREMA!',
+                    body: 'ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (75.0 mm/h). BUSQUE ABRIGO IMEDIATAMENTE!',
+                    precipitation: 75.0
+                }
+            };
+
+            // Carrega estatísticas
+            async function loadStats() {
+                try {
+                    const [usersResponse, devicesResponse] = await Promise.all([
+                        fetch('/api/admin/users'),
+                        fetch('/api/admin/users') // Temporário - criar endpoint específico depois
+                    ]);
+
+                    const users = await usersResponse.json();
+                    document.getElementById('totalUsers').textContent = users.length;
+                    
+                    // Simular contagem de dispositivos (criar endpoint depois)
+                    document.getElementById('totalDevices').textContent = users.length;
+                } catch (error) {
+                    console.error('Erro ao carregar estatísticas:', error);
+                }
+            }
 
             // Carrega a lista de usuários
             async function loadUsers() {
@@ -90,6 +305,7 @@
                     users = await response.json();
                     renderUsers(users);
                     loadingUsers.style.display = 'none';
+                    loadStats();
                 } catch (error) {
                     console.error('Erro:', error);
                     showAlert('Erro ao carregar usuários', 'danger');
@@ -119,7 +335,7 @@
                                 <h6 class="mb-1">${user.email || 'Usuário sem e-mail'}</h6>
                                 <small class="text-muted">ID: ${user.uid}</small>
                             </div>
-                            <small class="text-muted">${new Date(user.created_at).toLocaleDateString()}</small>
+                            <small class="text-muted">${new Date(user.created_at).toLocaleDateString('pt-BR')}</small>
                         </div>
                     `;
                     
@@ -130,12 +346,10 @@
 
             // Seleciona um usuário
             function selectUser(user) {
-                // Remove a seleção anterior
                 document.querySelectorAll('.user-card').forEach(el => {
                     el.classList.remove('selected');
                 });
                 
-                // Adiciona a seleção ao usuário clicado
                 const selectedCard = Array.from(document.querySelectorAll('.user-card')).find(el => 
                     el.textContent.includes(user.uid)
                 );
@@ -144,28 +358,76 @@
                     selectedCard.classList.add('selected');
                 }
                 
-                // Atualiza o formulário
                 selectedUserName.textContent = user.email || `Usuário ${user.uid.substring(0, 8)}...`;
                 userIdInput.value = user.id;
                 notificationForm.style.display = 'block';
                 
-                // Rola até o formulário
                 notificationForm.scrollIntoView({ behavior: 'smooth' });
             }
 
+            // Atualiza preview da notificação
+            function updatePreview() {
+                const config = notificationConfigs[selectedIntensity];
+                previewIcon.textContent = config.icon;
+                
+                if (customMessageCheckbox.checked) {
+                    const customTitle = document.getElementById('title').value;
+                    const customMessage = document.getElementById('message').value;
+                    previewTitle.textContent = customTitle || config.title;
+                    previewBody.textContent = customMessage || config.body;
+                } else {
+                    previewTitle.textContent = config.title;
+                    previewBody.textContent = config.body;
+                }
+            }
+
+            // Gerencia botões de intensidade
+            document.querySelectorAll('.intensity-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedIntensity = this.dataset.intensity;
+                    intensityInput.value = selectedIntensity;
+                    updatePreview();
+                });
+            });
+
+            // Ativa intensidade padrão (moderate)
+            document.querySelector('[data-intensity="moderate"]').classList.add('active');
+
+            // Toggle de mensagem personalizada
+            customMessageCheckbox.addEventListener('change', function() {
+                customMessageFields.style.display = this.checked ? 'block' : 'none';
+                updatePreview();
+            });
+
+            // Atualiza preview quando digitar
+            document.getElementById('title')?.addEventListener('input', updatePreview);
+            document.getElementById('message')?.addEventListener('input', updatePreview);
+
             // Envia a notificação
-            async function sendNotification(userId, title, message) {
+            async function sendNotification(userId, intensity, customTitle, customMessage) {
                 try {
                     submitBtn.disabled = true;
-                    submitBtnText.textContent = 'Enviando...';
+                    submitBtnText.textContent = '📤 Enviando...';
                     submitSpinner.classList.remove('d-none');
+
+                    const config = notificationConfigs[intensity];
+                    const title = customTitle || config.title;
+                    const message = customMessage || config.body;
 
                     const response = await fetch('/api/admin/send-notification', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ userId, title, message })
+                        body: JSON.stringify({ 
+                            userId, 
+                            title, 
+                            message,
+                            intensity,
+                            precipitation: config.precipitation
+                        })
                     });
 
                     const result = await response.json();
@@ -174,15 +436,21 @@
                         throw new Error(result.error || 'Erro ao enviar notificação');
                     }
 
-                    showAlert('Notificação enviada com sucesso!', 'success');
-                    document.getElementById('title').value = '';
-                    document.getElementById('message').value = '';
+                    notificationsSent++;
+                    document.getElementById('totalNotifications').textContent = notificationsSent;
+                    
+                    showAlert(`✅ Notificação enviada com sucesso! (${result.sent} dispositivo(s))`, 'success');
+                    
+                    if (customMessageCheckbox.checked) {
+                        document.getElementById('title').value = '';
+                        document.getElementById('message').value = '';
+                    }
                 } catch (error) {
                     console.error('Erro:', error);
-                    showAlert(error.message || 'Erro ao enviar notificação', 'danger');
+                    showAlert('❌ ' + (error.message || 'Erro ao enviar notificação'), 'danger');
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtnText.textContent = 'Enviar Notificação';
+                    submitBtnText.textContent = '🚀 Enviar Notificação de Teste';
                     submitSpinner.classList.add('d-none');
                 }
             }
@@ -199,7 +467,6 @@
                 
                 alertContainer.insertBefore(alert, alertContainer.firstChild);
                 
-                // Remove o alerta após 5 segundos
                 setTimeout(() => {
                     alert.classList.remove('show');
                     setTimeout(() => alert.remove(), 150);
@@ -210,19 +477,26 @@
             document.getElementById('sendNotificationForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const userId = userIdInput.value;
-                const title = document.getElementById('title').value;
-                const message = document.getElementById('message').value;
+                const intensity = intensityInput.value;
+                const customTitle = customMessageCheckbox.checked ? document.getElementById('title').value : '';
+                const customMessage = customMessageCheckbox.checked ? document.getElementById('message').value : '';
                 
-                if (!userId || !title || !message) {
-                    showAlert('Preencha todos os campos', 'warning');
+                if (!userId) {
+                    showAlert('⚠️ Selecione um usuário primeiro', 'warning');
                     return;
                 }
                 
-                sendNotification(userId, title, message);
+                if (customMessageCheckbox.checked && (!customTitle || !customMessage)) {
+                    showAlert('⚠️ Preencha título e mensagem personalizados', 'warning');
+                    return;
+                }
+                
+                sendNotification(userId, intensity, customTitle, customMessage);
             });
 
             // Inicializa a página
             loadUsers();
+            updatePreview();
         });
     </script>
 </body>
