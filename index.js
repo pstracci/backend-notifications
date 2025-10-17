@@ -4,6 +4,7 @@ const express = require('express');
 const cron = require('node-cron');
 const admin = require('./firebase-config'); // Importa a config do Firebase
 const db = require('./db'); // Importa nosso novo módulo de banco de dados
+const authMiddleware = require('./authMiddleware');
 
 const app = express();
 app.use(express.json()); // Middleware para ler o corpo de requisições JSON
@@ -15,6 +16,45 @@ app.use(express.json()); // Middleware para ler o corpo de requisições JSON
  * Recebe um token do Firebase do cliente, verifica, e cria um registro de usuário no banco se não existir.
  */
 app.post('/api/auth/verify', async (req, res) => {
+	
+	app.put('/api/users/location', authMiddleware, async (req, res) => {
+  // O UID vem do middleware, garantindo que o usuário só pode atualizar seus próprios dados.
+  const { uid } = req.user;
+  const { latitude, longitude } = req.body;
+
+  // Validação simples dos dados recebidos
+  if (latitude === undefined || longitude === undefined) {
+    return res.status(400).send({ error: 'Latitude e Longitude são obrigatórias.' });
+  }
+
+  try {
+    console.log(`Atualizando localização para o UID ${uid}: Lat ${latitude}, Lon ${longitude}`);
+
+    const updateUserLocationQuery = `
+      UPDATE users 
+      SET 
+        latitude = $1, 
+        longitude = $2, 
+        location_updated_at = NOW() 
+      WHERE uid = $3 
+      RETURNING id, uid, latitude, longitude, location_updated_at;
+    `;
+
+    const { rows } = await db.query(updateUserLocationQuery, [latitude, longitude, uid]);
+
+    if (rows.length === 0) {
+      // Isso não deveria acontecer se o usuário passou pela verificação de auth
+      return res.status(404).send({ error: 'Usuário não encontrado no banco de dados.' });
+    }
+
+    res.status(200).send({ success: true, user: rows[0] });
+
+  } catch (error) {
+    console.error(`Erro ao atualizar localização para o UID ${uid}:`, error);
+    res.status(500).send({ error: 'Falha ao atualizar a localização.' });
+  }
+});
+
   const { token } = req.body;
 
   if (!token) {
