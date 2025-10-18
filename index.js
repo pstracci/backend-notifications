@@ -371,6 +371,132 @@ app.get('/api/rate-limit-status', (req, res) => {
   }
 });
 
+// Endpoint para diagnosticar usuário
+app.get('/api/diagnose-user/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    
+    console.log(`\n=== DIAGNÓSTICO DO USUÁRIO ${uid} ===\n`);
+    
+    // 1. Verificar usuário
+    const userQuery = 'SELECT * FROM users WHERE uid = $1';
+    const { rows: users } = await db.query(userQuery, [uid]);
+    
+    if (users.length === 0) {
+      return res.status(404).send({
+        success: false,
+        error: 'Usuário não encontrado no banco de dados',
+        uid: uid
+      });
+    }
+    
+    const user = users[0];
+    
+    // 2. Verificar dispositivos
+    const devicesQuery = 'SELECT * FROM devices WHERE user_id = $1';
+    const { rows: devices } = await db.query(devicesQuery, [user.id]);
+    
+    // 3. Verificar cooldown
+    const cooldownQuery = `
+      SELECT * FROM notification_cooldown 
+      WHERE user_id = $1
+      ORDER BY last_notification_at DESC
+    `;
+    const { rows: cooldowns } = await db.query(cooldownQuery, [user.id]);
+    
+    // 4. Verificar localizações próximas
+    const nearbyQuery = `
+      SELECT DISTINCT latitude, longitude, COUNT(*) as user_count
+      FROM users
+      WHERE latitude IS NOT NULL 
+        AND longitude IS NOT NULL
+        AND ABS(latitude - $1) < 0.1
+        AND ABS(longitude - $2) < 0.1
+      GROUP BY latitude, longitude
+      ORDER BY user_count DESC
+    `;
+    const { rows: nearby } = await db.query(nearbyQuery, [user.latitude, user.longitude]);
+    
+    // 5. Analisar problemas
+    const problems = [];
+    const warnings = [];
+    
+    if (!user.latitude || !user.longitude) {
+      problems.push('Localização do usuário não está definida');
+    }
+    
+    if (devices.length === 0) {
+      problems.push('Nenhum dispositivo registrado');
+    } else {
+      devices.forEach((device, index) => {
+        if (!device.token) {
+          problems.push(`Dispositivo ${index + 1} não tem token FCM`);
+        }
+      });
+    }
+    
+    const activeCooldowns = cooldowns.filter(cd => {
+      const minutesAgo = Math.floor((Date.now() - new Date(cd.last_notification_at).getTime()) / 1000 / 60);
+      return minutesAgo < 60;
+    });
+    
+    if (activeCooldowns.length > 0) {
+      warnings.push(`${activeCooldowns.length} cooldown(s) ativo(s) - usuário não receberá notificações para essas localizações por até 1 hora`);
+    }
+    
+    // 6. Preparar resposta
+    res.status(200).send({
+      success: true,
+      user: {
+        id: user.id,
+        uid: user.uid,
+        email: user.email,
+        name: user.name,
+        location: {
+          latitude: user.latitude,
+          longitude: user.longitude,
+          updated_at: user.location_updated_at
+        },
+        created_at: user.created_at
+      },
+      devices: devices.map(d => ({
+        id: d.id,
+        token_preview: d.token ? d.token.substring(0, 50) + '...' : null,
+        has_token: !!d.token,
+        created_at: d.created_at
+      })),
+      cooldowns: cooldowns.map(cd => {
+        const minutesAgo = Math.floor((Date.now() - new Date(cd.last_notification_at).getTime()) / 1000 / 60);
+        return {
+          location: { latitude: cd.latitude, longitude: cd.longitude },
+          intensity: cd.intensity_level,
+          precipitation: cd.precipitation,
+          last_notification_at: cd.last_notification_at,
+          minutes_ago: minutesAgo,
+          is_active: minutesAgo < 60
+        };
+      }),
+      nearby_locations: nearby.map(loc => ({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        user_count: loc.user_count
+      })),
+      diagnosis: {
+        problems: problems,
+        warnings: warnings,
+        status: problems.length === 0 ? 'ok' : 'has_problems'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erro ao diagnosticar usuário:', error);
+    res.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 
