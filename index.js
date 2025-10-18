@@ -104,9 +104,9 @@ app.put('/api/users/location', authMiddleware, async (req, res) => {
   }
 });
 
-// Endpoint para registro de dispositivos
+// Endpoint para registro de dispositivos (com criação automática de usuário)
 app.post('/register-device', async (req, res) => {
-  const { token, uid } = req.body;
+  const { token, uid, email, name, latitude, longitude } = req.body;
   
   if (!token) {
     return res.status(400).send({ error: 'Token não fornecido.' });
@@ -117,30 +117,93 @@ app.post('/register-device', async (req, res) => {
   }
 
   try {
-    // Buscar o ID do usuário pelo UID
-    const userQuery = 'SELECT id FROM users WHERE uid = $1';
-    const { rows: userRows } = await db.query(userQuery, [uid]);
+    console.log(`\n=== REGISTRO DE DISPOSITIVO ===`);
+    console.log(`UID: ${uid}`);
+    console.log(`Token: ${token.substring(0, 20)}...`);
+    console.log(`Email: ${email || 'não fornecido'}`);
+    console.log(`Nome: ${name || 'não fornecido'}`);
+    console.log(`Localização: ${latitude}, ${longitude}`);
+    
+    // 1. Buscar ou criar o usuário
+    let userQuery = 'SELECT id FROM users WHERE uid = $1';
+    let { rows: userRows } = await db.query(userQuery, [uid]);
+    
+    let userId;
     
     if (userRows.length === 0) {
-      return res.status(404).send({ error: 'Usuário não encontrado.' });
+      // Usuário não existe, criar novo
+      console.log(`📝 Criando novo usuário: ${uid}`);
+      
+      const insertUserQuery = `
+        INSERT INTO users (uid, email, name, latitude, longitude, location_updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING id
+      `;
+      
+      const { rows: newUserRows } = await db.query(insertUserQuery, [
+        uid,
+        email || null,
+        name || null,
+        latitude || null,
+        longitude || null
+      ]);
+      
+      userId = newUserRows[0].id;
+      console.log(`✅ Usuário criado com ID: ${userId}`);
+    } else {
+      // Usuário existe, atualizar informações se fornecidas
+      userId = userRows[0].id;
+      console.log(`✅ Usuário encontrado com ID: ${userId}`);
+      
+      // Atualizar email, nome e localização se fornecidos
+      if (email || name || latitude !== undefined) {
+        const updateQuery = `
+          UPDATE users 
+          SET 
+            email = COALESCE($1, email),
+            name = COALESCE($2, name),
+            latitude = COALESCE($3, latitude),
+            longitude = COALESCE($4, longitude),
+            location_updated_at = CASE 
+              WHEN $3 IS NOT NULL THEN NOW() 
+              ELSE location_updated_at 
+            END
+          WHERE id = $5
+        `;
+        
+        await db.query(updateQuery, [
+          email || null,
+          name || null,
+          latitude || null,
+          longitude || null,
+          userId
+        ]);
+        
+        console.log(`📝 Informações do usuário atualizadas`);
+      }
     }
     
-    const userId = userRows[0].id;
-    
-    // Registrar ou atualizar o dispositivo
-    const queryText = `
+    // 2. Registrar ou atualizar o dispositivo
+    const deviceQuery = `
       INSERT INTO devices (token, user_id) 
       VALUES ($1, $2) 
       ON CONFLICT (user_id, token) 
       DO UPDATE SET user_id = $2
+      RETURNING id
     `;
     
-    await db.query(queryText, [token, userId]);
-    console.log(`Token registrado para usuário ${uid}: ${token.substring(0, 20)}...`);
-    res.status(200).send({ success: true });
+    const { rows: deviceRows } = await db.query(deviceQuery, [token, userId]);
+    console.log(`✅ Dispositivo registrado com ID: ${deviceRows[0].id}`);
+    console.log(`=====================================\n`);
+    
+    res.status(200).send({ 
+      success: true,
+      userId: userId,
+      deviceId: deviceRows[0].id
+    });
   } catch (error) {
-    console.error('Erro ao registrar token:', error);
-    res.status(500).send({ error: 'Falha ao registrar dispositivo.' });
+    console.error('❌ Erro ao registrar dispositivo:', error);
+    res.status(500).send({ error: 'Falha ao registrar dispositivo: ' + error.message });
   }
 });
 
