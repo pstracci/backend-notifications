@@ -26,6 +26,9 @@ async function main() {
     // Executar migration de cooldown
     await runMigration('003_create_notification_cooldown.sql');
     
+    // Atualizar cooldown para nível de usuário
+    await runMigration('004_update_cooldown_per_user.sql');
+    
     console.log('\n✅ Todas as migrations foram executadas com sucesso!');
     process.exit(0);
   } catch (error) {
