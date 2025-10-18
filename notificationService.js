@@ -144,11 +144,12 @@ async function getDeviceTokensForUsers(db, userUids) {
     const placeholders = userUids.map((_, index) => `$${index + 1}`).join(', ');
     
     const query = `
-      SELECT DISTINCT u.id as user_id, d.token
+      SELECT DISTINCT d.user_id, d.token
       FROM devices d
       INNER JOIN users u ON d.user_id = u.id
       WHERE u.uid IN (${placeholders})
         AND d.token IS NOT NULL
+        AND d.user_id IS NOT NULL
     `;
 
     const { rows } = await db.query(query, userUids);

@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check-db": "node check-db-status.js",
+    "setup-cooldown": "node setup-cooldown.js",
+    "migrate": "node run-migration.js"
   },
   "keywords": [],
   "author": "",

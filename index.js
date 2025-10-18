@@ -106,15 +106,37 @@ app.put('/api/users/location', authMiddleware, async (req, res) => {
 
 // Endpoint para registro de dispositivos
 app.post('/register-device', async (req, res) => {
-  const { token } = req.body;
+  const { token, uid } = req.body;
+  
   if (!token) {
     return res.status(400).send({ error: 'Token não fornecido.' });
   }
+  
+  if (!uid) {
+    return res.status(400).send({ error: 'UID do usuário não fornecido.' });
+  }
 
   try {
-    const queryText = 'INSERT INTO devices (token) VALUES ($1) ON CONFLICT (token) DO NOTHING';
-    await db.query(queryText, [token]);
-    console.log(`Token registrado ou já existente: ${token.substring(0, 20)}...`);
+    // Buscar o ID do usuário pelo UID
+    const userQuery = 'SELECT id FROM users WHERE uid = $1';
+    const { rows: userRows } = await db.query(userQuery, [uid]);
+    
+    if (userRows.length === 0) {
+      return res.status(404).send({ error: 'Usuário não encontrado.' });
+    }
+    
+    const userId = userRows[0].id;
+    
+    // Registrar ou atualizar o dispositivo
+    const queryText = `
+      INSERT INTO devices (token, user_id) 
+      VALUES ($1, $2) 
+      ON CONFLICT (user_id, token) 
+      DO UPDATE SET user_id = $2
+    `;
+    
+    await db.query(queryText, [token, userId]);
+    console.log(`Token registrado para usuário ${uid}: ${token.substring(0, 20)}...`);
     res.status(200).send({ success: true });
   } catch (error) {
     console.error('Erro ao registrar token:', error);
