@@ -23,14 +23,73 @@ const notificationConfigs = {
   }
 };
 
-// Listar todos os usuários
+// Listar todos os usuários com informações de dispositivos
 router.get('/api/admin/users', async (req, res) => {
   try {
-    const { rows: users } = await db.query('SELECT id, uid, email, created_at FROM users');
+    const { rows: users } = await db.query(`
+      SELECT 
+        u.id, 
+        u.uid, 
+        u.email,
+        u.name,
+        u.latitude,
+        u.longitude,
+        u.created_at,
+        u.location_updated_at,
+        COUNT(d.id) as device_count
+      FROM users u
+      LEFT JOIN devices d ON d.user_id = u.id
+      GROUP BY u.id, u.uid, u.email, u.name, u.latitude, u.longitude, u.created_at, u.location_updated_at
+      ORDER BY u.created_at DESC
+    `);
+    
+    console.log(`📋 Listando ${users.length} usuário(s)`);
     res.json(users);
   } catch (error) {
     console.error('Erro ao buscar usuários:', error);
     res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+});
+
+// Obter detalhes de um usuário específico
+router.get('/api/admin/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Buscar informações do usuário
+    const { rows: users } = await db.query(
+      'SELECT id, uid, email, name, latitude, longitude, created_at, location_updated_at FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+    
+    // Buscar dispositivos do usuário
+    const { rows: devices } = await db.query(
+      'SELECT id, token, created_at FROM devices WHERE user_id = $1',
+      [userId]
+    );
+    
+    // Buscar histórico de notificações
+    const { rows: notifications } = await db.query(
+      `SELECT latitude, longitude, intensity_level, precipitation, last_notification_at 
+       FROM notification_cooldown 
+       WHERE user_id = $1 
+       ORDER BY last_notification_at DESC 
+       LIMIT 10`,
+      [userId]
+    );
+    
+    res.json({
+      user: users[0],
+      devices: devices,
+      notifications: notifications
+    });
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do usuário:', error);
+    res.status(500).json({ error: 'Erro ao buscar detalhes do usuário' });
   }
 });
 
@@ -49,17 +108,21 @@ router.post('/api/admin/send-notification', async (req, res) => {
     console.log(`Título: ${title}`);
     console.log(`Mensagem: ${message}`);
 
-    // Busca todos os tokens de dispositivos disponíveis
+    // Busca os tokens de dispositivos do usuário específico
     const { rows: userDevices } = await db.query(
-      `SELECT token FROM devices WHERE token IS NOT NULL`
+      `SELECT d.token 
+       FROM devices d 
+       WHERE d.user_id = $1 
+         AND d.token IS NOT NULL`,
+      [userId]
     );
 
     if (userDevices.length === 0) {
-      return res.status(404).json({ error: 'Nenhum dispositivo com token encontrado' });
+      return res.status(404).json({ error: 'Nenhum dispositivo encontrado para este usuário' });
     }
 
     const tokens = userDevices.map(device => device.token);
-    console.log(`📱 Enviando para ${tokens.length} dispositivo(s)`);
+    console.log(`📱 Enviando para ${tokens.length} dispositivo(s) do usuário ${userId}`);
 
     // Obtém configuração de intensidade
     const config = notificationConfigs[intensity] || notificationConfigs.moderate;
