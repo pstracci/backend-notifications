@@ -262,136 +262,123 @@ async function sendRainNotification(tokens, intensityLevel, precipitation, locat
 }
 
 /**
- * Processa previsões e envia notificações para localizações afetadas
+ * Processa alertas meteorológicos e envia notificações
  * @param {Object} db - Instância do banco de dados
- * @param {Array} forecasts - Array de previsões com informações de chuva
+ * @param {Array} locationAlerts - Array de localizações com alertas
  * @returns {Promise<Object>} Resumo do processamento
  */
-async function processRainForecasts(db, forecasts) {
-  if (!forecasts || forecasts.length === 0) {
-    console.log('Nenhuma previsão de chuva para processar');
-    return { totalNotifications: 0, totalUsers: 0, locations: [] };
+async function processWeatherAlerts(db, locationAlerts) {
+  if (!locationAlerts || locationAlerts.length === 0) {
+    console.log('✅ Nenhum alerta para processar');
+    return { totalNotifications: 0, alertsByType: {}, results: [] };
   }
 
-  console.log(`Processando ${forecasts.length} previsão(ões) de chuva...`);
+  console.log(`\n📬 Processando alertas para ${locationAlerts.length} localização(ões)...`);
   
   const results = [];
   let totalSuccessCount = 0;
   let totalFailureCount = 0;
-  let totalSkippedUsers = 0;
+  const alertsByType = {};
 
-  for (const forecast of forecasts) {
-    console.log(`\n--- Processando localização: ${forecast.latitude}, ${forecast.longitude} ---`);
-    console.log(`Intensidade: ${forecast.intensityLevel} (${forecast.maxPrecipitation.toFixed(2)} mm/h)`);
-    console.log(`Usuários afetados: ${forecast.userCount}`);
+  for (const locationData of locationAlerts) {
+    console.log(`\n--- 📍 ${locationData.latitude}, ${locationData.longitude} ---`);
+    console.log(`Alertas: ${locationData.alerts.length} | Usuários: ${locationData.userCount}`);
 
-    // Obter tokens e IDs dos usuários nesta localização
-    const userDevices = await getDeviceTokensForUsers(db, forecast.userUids);
+    // Obter tokens dos usuários
+    const userDevices = await getDeviceTokensForUsers(db, locationData.userUids);
     
     if (userDevices.length === 0) {
-      console.log('⚠️ Nenhum dispositivo registrado para os usuários desta localização');
+      console.log('⚠️ Nenhum dispositivo registrado');
       continue;
     }
 
-    // Filtrar usuários que NÃO estão em cooldown
-    const devicesToNotify = [];
-    let skippedInLocation = 0;
-
-    for (const device of userDevices) {
-      const inCooldown = await isUserLocationInCooldown(
-        db, 
-        device.userId, 
-        forecast.latitude, 
-        forecast.longitude
-      );
+    // Processar cada alerta para esta localização
+    for (const alert of locationData.alerts) {
+      console.log(`\n  🔔 ${alert.type} (${alert.severity})`);
       
-      if (!inCooldown) {
-        devicesToNotify.push(device);
-      } else {
-        skippedInLocation++;
-      }
-    }
+      alertsByType[alert.type] = (alertsByType[alert.type] || 0) + 1;
+      
+      // Filtrar usuários sem cooldown para este tipo de alerta
+      const devicesToNotify = [];
+      let skipped = 0;
 
-    console.log(`📱 ${devicesToNotify.length} usuário(s) para notificar, ${skippedInLocation} em cooldown`);
-    totalSkippedUsers += skippedInLocation;
-
-    if (devicesToNotify.length === 0) {
-      console.log('⏭️ Todos os usuários desta localização estão em cooldown');
-      results.push({
-        location: `${forecast.latitude}, ${forecast.longitude}`,
-        intensity: forecast.intensityLevel,
-        precipitation: forecast.maxPrecipitation,
-        userCount: forecast.userCount,
-        devicesNotified: 0,
-        devicesFailed: 0,
-        skipped: true,
-        reason: 'all_users_in_cooldown'
-      });
-      continue;
-    }
-
-    // Enviar notificação apenas para os tokens dos usuários sem cooldown
-    const tokensToSend = devicesToNotify.map(d => d.token);
-    const result = await sendRainNotification(
-      tokensToSend,
-      forecast.intensityLevel,
-      forecast.maxPrecipitation,
-      { latitude: forecast.latitude, longitude: forecast.longitude },
-      db
-    );
-
-    // Registrar cooldown para cada usuário que recebeu notificação com sucesso
-    if (result.successCount > 0) {
-      for (let i = 0; i < devicesToNotify.length; i++) {
-        // Verificar se a notificação foi enviada com sucesso para este token
-        if (result.responses[i]?.success) {
-          await recordNotificationSent(
-            db,
-            devicesToNotify[i].userId,
-            forecast.latitude,
-            forecast.longitude,
-            forecast.intensityLevel,
-            forecast.maxPrecipitation
-          );
+      for (const device of userDevices) {
+        const inCooldown = await isUserAlertInCooldown(
+          db, device.userId, locationData.latitude, locationData.longitude, alert.type
+        );
+        
+        if (!inCooldown) {
+          devicesToNotify.push(device);
+        } else {
+          skipped++;
         }
       }
+
+      console.log(`  📱 ${devicesToNotify.length} para notificar, ${skipped} em cooldown`);
+
+      if (devicesToNotify.length === 0) {
+        console.log('  ⏭️ Todos em cooldown');
+        continue;
+      }
+
+      // Enviar notificações
+      const tokensToSend = devicesToNotify.map(d => d.token);
+      const result = await sendAlertNotification(
+        tokensToSend,
+        alert,
+        { latitude: locationData.latitude, longitude: locationData.longitude },
+        db
+      );
+
+      // Registrar cooldown para envios bem-sucedidos
+      if (result.successCount > 0) {
+        for (let i = 0; i < devicesToNotify.length; i++) {
+          if (result.responses[i]?.success) {
+            await recordNotificationSent(
+              db,
+              devicesToNotify[i].userId,
+              locationData.latitude,
+              locationData.longitude,
+              alert
+            );
+          }
+        }
+      }
+
+      totalSuccessCount += result.successCount;
+      totalFailureCount += result.failureCount;
     }
 
-    totalSuccessCount += result.successCount;
-    totalFailureCount += result.failureCount;
-
     results.push({
-      location: `${forecast.latitude}, ${forecast.longitude}`,
-      intensity: forecast.intensityLevel,
-      precipitation: forecast.maxPrecipitation,
-      userCount: forecast.userCount,
-      devicesNotified: result.successCount,
-      devicesFailed: result.failureCount,
-      usersSkipped: skippedInLocation,
-      skipped: false
+      location: `${locationData.latitude}, ${locationData.longitude}`,
+      alertCount: locationData.alerts.length,
+      userCount: locationData.userCount
     });
   }
 
-  const summary = {
+  console.log('\n=== 📊 RESUMO ===');
+  console.log(`Localizações: ${locationAlerts.length}`);
+  console.log(`Notificações enviadas: ${totalSuccessCount}`);
+  console.log(`Falhas: ${totalFailureCount}`);
+  console.log('\nAlertas por tipo:');
+  Object.entries(alertsByType).forEach(([type, count]) => {
+    console.log(`  ${type}: ${count}`);
+  });
+
+  return {
     totalNotifications: totalSuccessCount,
     totalFailures: totalFailureCount,
-    locationsProcessed: forecasts.length,
-    usersSkipped: totalSkippedUsers,
-    results: results
+    alertsByType,
+    results
   };
-
-  console.log('\n=== RESUMO DO PROCESSAMENTO ===');
-  console.log(`Localizações processadas: ${summary.locationsProcessed}`);
-  console.log(`Usuários pulados (cooldown): ${summary.usersSkipped}`);
-  console.log(`Notificações enviadas com sucesso: ${summary.totalNotifications}`);
-  console.log(`Falhas no envio: ${summary.totalFailures}`);
-
-  return summary;
 }
 
 module.exports = {
   getNotificationConfig,
   getDeviceTokensForUsers,
-  sendRainNotification,
-  processRainForecasts
+  removeInvalidTokens,
+  isUserAlertInCooldown,
+  recordNotificationSent,
+  sendAlertNotification,
+  processWeatherAlerts
 };

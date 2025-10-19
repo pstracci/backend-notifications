@@ -279,53 +279,53 @@ app.post('/api/test-notification', async (req, res) => {
 });
 
 // --- LÓGICA DO AGENDADOR (CRON JOB) ---
-// Executa a cada 10 minutos
-cron.schedule('*/10 * * * *', async () => {
-  console.log('\n========================================');
-  console.log('🔍 Executando verificação de chuva agendada...');
+// Executa a cada 15 minutos (otimizado para reduzir chamadas à API)
+cron.schedule('*/15 * * * *', async () => {
+  console.log('\n========================================')
+  console.log('🌡️ Executando verificação de alertas meteorológicos...');
   console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
   console.log('========================================\n');
   
   try {
-    // 1. Verificar previsão de chuva para todas as localizações únicas
-    const forecasts = await weatherService.checkRainForAllLocations(db);
+    // 1. Verificar alertas meteorológicos para todas as localizações
+    const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
     
-    if (forecasts.length === 0) {
-      console.log('✅ Sem previsão de chuva significativa para nenhuma localização.');
+    if (locationAlerts.length === 0) {
+      console.log('✅ Sem alertas meteorológicos no momento.');
       return;
     }
     
-    console.log(`\n⚠️ Chuva detectada em ${forecasts.length} localização(ões)!\n`);
+    console.log(`\n⚠️ Alertas detectados em ${locationAlerts.length} localização(ões)!\n`);
     
-    // 2. Processar previsões e enviar notificações
-    const summary = await notificationService.processRainForecasts(db, forecasts);
+    // 2. Processar alertas e enviar notificações
+    const summary = await notificationService.processWeatherAlerts(db, locationAlerts);
     
-    console.log('\n========================================');
+    console.log('\n========================================')
     console.log('✅ Verificação concluída!');
     console.log('========================================\n');
     
   } catch (error) {
-    console.error('\n❌ ERRO durante verificação de chuva:', error);
+    console.error('\n❌ ERRO durante verificação:', error);
     console.error('Stack trace:', error.stack);
   }
 });
 
-// Endpoint manual para testar verificação de chuva
-app.post('/api/check-rain-now', async (req, res) => {
-  console.log('\n=== VERIFICAÇÃO MANUAL DE CHUVA INICIADA ===\n');
+// Endpoint manual para testar verificação de alertas
+app.post('/api/check-alerts-now', async (req, res) => {
+  console.log('\n=== VERIFICAÇÃO MANUAL DE ALERTAS INICIADA ===\n');
   
   try {
-    const forecasts = await weatherService.checkRainForAllLocations(db);
+    const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
     
-    if (forecasts.length === 0) {
+    if (locationAlerts.length === 0) {
       return res.status(200).send({
         success: true,
-        message: 'Sem previsão de chuva significativa',
-        forecasts: []
+        message: 'Sem alertas meteorológicos no momento',
+        alerts: []
       });
     }
     
-    const summary = await notificationService.processRainForecasts(db, forecasts);
+    const summary = await notificationService.processWeatherAlerts(db, locationAlerts);
     
     res.status(200).send({
       success: true,
@@ -342,28 +342,24 @@ app.post('/api/check-rain-now', async (req, res) => {
   }
 });
 
-// Endpoint para verificar status do rate limiter
-app.get('/api/rate-limit-status', (req, res) => {
+// Endpoint para verificar status da API (Open-Meteo não tem limites rígidos)
+app.get('/api/weather-status', (req, res) => {
   try {
-    const stats = weatherService.getRateLimiterStats();
-    
     res.status(200).send({
       success: true,
-      limits: {
-        perSecond: { max: 3, description: '3 requisições por segundo' },
-        perHour: { max: 25, description: '25 requisições por hora' },
-        perDay: { max: 500, description: '500 requisições por dia' }
-      },
-      current: stats,
-      warnings: [
-        stats.perDay.percentage >= 90 ? '⚠️ Limite diário quase atingido!' : null,
-        stats.perHour.percentage >= 90 ? '⚠️ Limite por hora quase atingido!' : null,
-        stats.perSecond.percentage >= 90 ? '⚠️ Limite por segundo quase atingido!' : null
-      ].filter(w => w !== null)
+      api: 'Open-Meteo',
+      description: 'API gratuita sem limites rígidos de taxa',
+      features: [
+        'Chuva atual e prevista',
+        'Índice UV',
+        'Qualidade do ar',
+        'Velocidade e rajadas de vento'
+      ],
+      message: 'Sistema operacional'
     });
     
   } catch (error) {
-    console.error('Erro ao obter status do rate limiter:', error);
+    console.error('Erro ao obter status:', error);
     res.status(500).send({
       success: false,
       error: error.message
