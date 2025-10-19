@@ -4,48 +4,137 @@
 const admin = require('./firebase-config');
 
 /**
- * Obtém configuração de notificação baseada na intensidade da chuva
- * @param {string} intensityLevel - Nível de intensidade: 'light', 'moderate', 'heavy', 'extreme'
- * @param {number} precipitation - Valor de precipitação em mm/h
+ * Obtém configuração de notificação baseada no tipo e severidade do alerta
+ * @param {Object} alert - Objeto do alerta contendo type, severity, value e message
  * @returns {Object} Configuração da notificação
  */
-function getNotificationConfig(intensityLevel, precipitation) {
-  const configs = {
-    light: {
-      title: '🌦️ Chuva Fraca se Aproximando',
-      body: `Chuva leve prevista nos próximos 30 minutos (${precipitation.toFixed(1)} mm/h). Leve um guarda-chuva!`,
+function getNotificationConfig(alert) {
+  const { type, severity, value, message } = alert;
+  
+  // Configurações para alertas de chuva
+  if (type === 'rain_now') {
+    const rainConfigs = {
+      light: {
+        title: '🌦️ Chuva Fraca se Aproximando',
+        body: `Chuva leve prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Leve um guarda-chuva!`,
+        priority: 'normal',
+        vibrationPattern: [200, 100, 200],
+        sound: 'default'
+      },
+      moderate: {
+        title: '🌧️ Chuva Moderada se Aproximando',
+        body: `Chuva moderada prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Prepare-se!`,
+        priority: 'high',
+        vibrationPattern: [300, 150, 300, 150, 300],
+        sound: 'default'
+      },
+      heavy: {
+        title: '⛈️ CHUVA FORTE se Aproximando!',
+        body: `ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Busque abrigo!`,
+        priority: 'high',
+        vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
+        sound: 'default'
+      },
+      extreme: {
+        title: '🚨 ALERTA: CHUVA EXTREMA!',
+        body: `ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). BUSQUE ABRIGO IMEDIATAMENTE!`,
+        priority: 'high',
+        vibrationPattern: [500, 250, 500, 250, 500, 250, 500, 250, 500],
+        sound: 'default'
+      }
+    };
+    return rainConfigs[severity] || rainConfigs.moderate;
+  }
+  
+  // Configurações para alertas de qualidade do ar
+  if (type === 'air_quality') {
+    const airConfigs = {
+      moderate: {
+        title: '😷 Qualidade do Ar Moderada',
+        body: message || `Qualidade do ar moderada (AQI: ${Math.round(value)}). Pessoas sensíveis devem considerar reduzir atividades ao ar livre.`,
+        priority: 'normal',
+        vibrationPattern: [200, 100, 200],
+        sound: 'default'
+      },
+      poor: {
+        title: '⚠️ Qualidade do Ar Ruim',
+        body: message || `Qualidade do ar ruim (AQI: ${Math.round(value)}). Evite atividades prolongadas ao ar livre.`,
+        priority: 'high',
+        vibrationPattern: [300, 150, 300, 150, 300],
+        sound: 'default'
+      },
+      very_poor: {
+        title: '🚨 Qualidade do Ar Muito Ruim',
+        body: message || `ALERTA: Qualidade do ar muito ruim (AQI: ${Math.round(value)}). Evite sair de casa!`,
+        priority: 'high',
+        vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
+        sound: 'default'
+      }
+    };
+    return airConfigs[severity] || airConfigs.moderate;
+  }
+  
+  // Configurações para alertas de vento
+  if (type === 'wind') {
+    const windConfigs = {
+      strong: {
+        title: '💨 Vento Forte',
+        body: message || `Vento forte detectado (${Math.round(value)} km/h). Tenha cuidado ao ar livre.`,
+        priority: 'high',
+        vibrationPattern: [300, 150, 300, 150, 300],
+        sound: 'default'
+      },
+      very_strong: {
+        title: '🌪️ Vento Muito Forte',
+        body: message || `ALERTA: Vento muito forte (${Math.round(value)} km/h). Evite áreas abertas!`,
+        priority: 'high',
+        vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
+        sound: 'default'
+      }
+    };
+    return windConfigs[severity] || windConfigs.strong;
+  }
+  
+  // Configurações para alertas de UV
+  if (type === 'uv_high') {
+    return {
+      title: '☀️ Índice UV Alto',
+      body: message || `Índice UV alto (${Math.round(value)}). Use protetor solar e evite exposição prolongada ao sol.`,
       priority: 'normal',
-      // Vibração: padrão curto [duração, pausa, duração]
       vibrationPattern: [200, 100, 200],
       sound: 'default'
-    },
-    moderate: {
-      title: '🌧️ Chuva Moderada se Aproximando',
-      body: `Chuva moderada prevista nos próximos 30 minutos (${precipitation.toFixed(1)} mm/h). Prepare-se!`,
-      priority: 'high',
-      // Vibração: padrão médio
-      vibrationPattern: [300, 150, 300, 150, 300],
-      sound: 'default'
-    },
-    heavy: {
-      title: '⛈️ CHUVA FORTE se Aproximando!',
-      body: `ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (${precipitation.toFixed(1)} mm/h). Busque abrigo!`,
-      priority: 'high',
-      // Vibração: padrão intenso
-      vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
-      sound: 'default'
-    },
-    extreme: {
-      title: '🚨 ALERTA: CHUVA EXTREMA!',
-      body: `ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (${precipitation.toFixed(1)} mm/h). BUSQUE ABRIGO IMEDIATAMENTE!`,
-      priority: 'high',
-      // Vibração: padrão muito intenso
-      vibrationPattern: [500, 250, 500, 250, 500, 250, 500, 250, 500],
-      sound: 'default'
-    }
+    };
+  }
+  
+  // Configurações para alertas de temperatura
+  if (type === 'temperature') {
+    const tempConfigs = {
+      high: {
+        title: '🌡️ Temperatura Elevada',
+        body: message || `Temperatura elevada (${Math.round(value)}°C). Mantenha-se hidratado!`,
+        priority: 'normal',
+        vibrationPattern: [200, 100, 200],
+        sound: 'default'
+      },
+      low: {
+        title: '❄️ Temperatura Baixa',
+        body: message || `Temperatura baixa (${Math.round(value)}°C). Agasalhe-se bem!`,
+        priority: 'normal',
+        vibrationPattern: [200, 100, 200],
+        sound: 'default'
+      }
+    };
+    return tempConfigs[severity] || tempConfigs.high;
+  }
+  
+  // Configuração padrão para tipos desconhecidos
+  return {
+    title: '⚠️ Alerta Meteorológico',
+    body: message || `Alerta detectado: ${type} (${severity})`,
+    priority: 'normal',
+    vibrationPattern: [200, 100, 200],
+    sound: 'default'
   };
-
-  return configs[intensityLevel] || configs.moderate;
 }
 
 /**
@@ -107,23 +196,21 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
  * @param {number} userId - ID do usuário
  * @param {number} latitude - Latitude da localização
  * @param {number} longitude - Longitude da localização
- * @param {string} intensityLevel - Nível de intensidade
- * @param {number} precipitation - Precipitação em mm/h
+ * @param {string} alertType - Tipo do alerta (rain_now, air_quality, wind, etc)
+ * @param {string} severity - Severidade do alerta
  */
-async function recordNotificationSent(db, userId, latitude, longitude, intensityLevel, precipitation) {
+async function recordNotificationSent(db, userId, latitude, longitude, alertType, severity) {
   try {
     const query = `
-      INSERT INTO notification_cooldown (user_id, latitude, longitude, intensity_level, precipitation, last_notification_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (user_id, latitude, longitude)
+      INSERT INTO notification_cooldown (user_id, latitude, longitude, alert_type, last_notification_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (user_id, latitude, longitude, alert_type)
       DO UPDATE SET
-        last_notification_at = NOW(),
-        intensity_level = $4,
-        precipitation = $5
+        last_notification_at = NOW()
     `;
     
-    await db.query(query, [userId, latitude, longitude, intensityLevel, precipitation]);
-    console.log(`📝 Cooldown registrado para usuário ${userId} em ${latitude}, ${longitude}`);
+    await db.query(query, [userId, latitude, longitude, alertType]);
+    console.log(`📝 Cooldown registrado para usuário ${userId} em ${latitude}, ${longitude} (${alertType})`);
   } catch (error) {
     console.error('Erro ao registrar cooldown:', error);
   }
@@ -341,7 +428,8 @@ async function processWeatherAlerts(db, locationAlerts) {
               devicesToNotify[i].userId,
               locationData.latitude,
               locationData.longitude,
-              alert
+              alert.type,
+              alert.severity
             );
           }
         }
