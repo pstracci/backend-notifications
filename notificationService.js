@@ -167,21 +167,21 @@ async function getDeviceTokensForUsers(db, userUids) {
 }
 
 /**
- * Envia notificação para dispositivos específicos
+ * Envia notificação de alerta para dispositivos específicos
  * @param {Array} tokens - Array de tokens de dispositivos
- * @param {string} intensityLevel - Nível de intensidade da chuva
- * @param {number} precipitation - Valor de precipitação
+ * @param {Object} alert - Objeto do alerta
  * @param {Object} location - Objeto com latitude e longitude
+ * @param {Object} db - Instância do banco de dados
  * @returns {Promise<Object>} Resultado do envio
  */
-async function sendRainNotification(tokens, intensityLevel, precipitation, location, db) {
+async function sendAlertNotification(tokens, alert, location, db) {
   if (!tokens || tokens.length === 0) {
     console.log('Nenhum token disponível para enviar notificação');
     return { successCount: 0, failureCount: 0, invalidTokens: [] };
   }
 
   try {
-    const config = getNotificationConfig(intensityLevel, precipitation);
+    const config = getNotificationConfig(alert);
     
     // Construir mensagem para Firebase Cloud Messaging
     const message = {
@@ -192,11 +192,11 @@ async function sendRainNotification(tokens, intensityLevel, precipitation, locat
       android: {
         priority: config.priority,
         notification: {
-          channelId: 'rain_alerts',
+          channelId: 'weather_alerts',
           defaultSound: true,
           defaultVibrateTimings: false,
           vibrateTimingsMillis: config.vibrationPattern,
-          tag: `rain_${location.latitude}_${location.longitude}` // Evita notificações duplicadas
+          tag: `${alert.type}_${location.latitude}_${location.longitude}` // Evita notificações duplicadas
         }
       },
       apns: {
@@ -208,16 +208,17 @@ async function sendRainNotification(tokens, intensityLevel, precipitation, locat
         }
       },
       data: {
-        type: 'rain_alert',
-        intensity: intensityLevel,
-        precipitation: precipitation.toString(),
+        type: alert.type,
+        severity: alert.severity,
+        value: alert.value.toString(),
         latitude: location.latitude.toString(),
         longitude: location.longitude.toString(),
-        vibrationPattern: JSON.stringify(config.vibrationPattern)
+        vibrationPattern: JSON.stringify(config.vibrationPattern),
+        message: alert.message
       }
     };
 
-    console.log(`Enviando notificação de ${intensityLevel} para ${tokens.length} dispositivo(s)...`);
+    console.log(`📤 Enviando ${alert.type} (${alert.severity}) para ${tokens.length} dispositivo(s)...`);
     
     const response = await admin.messaging().sendEachForMulticast({
       ...message,
