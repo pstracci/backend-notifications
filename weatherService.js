@@ -37,6 +37,40 @@ function getRainIntensityLevel(precipitationIntensity) {
 }
 
 /**
+ * Determina o nível de alerta UV
+ */
+function getUVLevel(uvIndex) {
+  if (uvIndex < 3) return { level: 'low', shouldAlert: false };
+  if (uvIndex < 6) return { level: 'moderate', shouldAlert: false };
+  if (uvIndex < 8) return { level: 'high', shouldAlert: true };
+  if (uvIndex < 11) return { level: 'very_high', shouldAlert: true };
+  return { level: 'extreme', shouldAlert: true };
+}
+
+/**
+ * Determina o nível de qualidade do ar
+ */
+function getAirQualityLevel(aqi) {
+  if (aqi <= 20) return { level: 'good', shouldAlert: false, description: 'Boa' };
+  if (aqi <= 40) return { level: 'fair', shouldAlert: false, description: 'Razoável' };
+  if (aqi <= 60) return { level: 'moderate', shouldAlert: true, description: 'Moderada' };
+  if (aqi <= 80) return { level: 'poor', shouldAlert: true, description: 'Ruim' };
+  if (aqi <= 100) return { level: 'very_poor', shouldAlert: true, description: 'Muito Ruim' };
+  return { level: 'extremely_poor', shouldAlert: true, description: 'Extremamente Ruim' };
+}
+
+/**
+ * Determina o nível de alerta de vento
+ */
+function getWindLevel(windSpeed, windGusts) {
+  const maxWind = Math.max(windSpeed, windGusts || 0);
+  if (maxWind < 30) return { level: 'calm', shouldAlert: false };
+  if (maxWind < 50) return { level: 'moderate', shouldAlert: true, description: 'Vento moderado' };
+  if (maxWind < 75) return { level: 'strong', shouldAlert: true, description: 'Vento forte' };
+  return { level: 'very_strong', shouldAlert: true, description: 'Vento muito forte' };
+}
+
+/**
  * Consulta dados meteorológicos completos para uma localização
  * @param {number} latitude - Latitude da localização
  * @param {number} longitude - Longitude da localização
