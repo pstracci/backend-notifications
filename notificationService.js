@@ -68,23 +68,24 @@ async function removeInvalidTokens(db, invalidTokens) {
 }
 
 /**
- * Verifica se um usuário está em cooldown para uma localização (última notificação foi há menos de 1 hora)
+ * Verifica se um usuário está em cooldown para um tipo específico de alerta
  * @param {Object} db - Instância do banco de dados
  * @param {number} userId - ID do usuário
  * @param {number} latitude - Latitude da localização
  * @param {number} longitude - Longitude da localização
+ * @param {string} alertType - Tipo do alerta (rain_now, uv_high, etc)
  * @returns {Promise<boolean>} True se está em cooldown, False caso contrário
  */
-async function isUserLocationInCooldown(db, userId, latitude, longitude) {
+async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType) {
   try {
     const query = `
       SELECT last_notification_at
       FROM notification_cooldown
-      WHERE user_id = $1 AND latitude = $2 AND longitude = $3
+      WHERE user_id = $1 AND latitude = $2 AND longitude = $3 AND alert_type = $4
         AND last_notification_at > NOW() - INTERVAL '1 hour'
     `;
     
-    const { rows } = await db.query(query, [userId, latitude, longitude]);
+    const { rows } = await db.query(query, [userId, latitude, longitude, alertType]);
     
     if (rows.length > 0) {
       const lastNotification = new Date(rows[0].last_notification_at);
