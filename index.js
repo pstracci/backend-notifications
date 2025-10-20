@@ -278,9 +278,11 @@ app.post('/api/test-notification', async (req, res) => {
   }
 });
 
-// --- LÓGICA DO AGENDADOR (CRON JOB) ---
-// Executa a cada 15 minutos (otimizado para reduzir chamadas à API)
-cron.schedule('*/15 * * * *', async () => {
+// --- LÓGICA DO AGENDADOR (CRON JOBS) ---
+
+// CRON 1: Verificação de alertas meteorológicos gerais
+// Executa a cada 15 minutos (0, 15, 30, 45)
+cron.schedule('0,15,30,45 * * * *', async () => {
   console.log('\n========================================')
   console.log('🌡️ Executando verificação de alertas meteorológicos...');
   console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
@@ -307,6 +309,71 @@ cron.schedule('*/15 * * * *', async () => {
   } catch (error) {
     console.error('\n❌ ERRO durante verificação:', error);
     console.error('Stack trace:', error.stack);
+  }
+});
+
+// CRON 2: Limpeza de registros de cooldown expirados
+// Executa a cada hora no minuto 5 (5, 1:05, 2:05, etc)
+cron.schedule('5 * * * *', async () => {
+  console.log('\n========================================')
+  console.log('🧹 Executando limpeza de cooldown expirado...');
+  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('========================================\n');
+  
+  try {
+    // Remover registros com mais de 1 hora
+    const result = await db.query(`
+      DELETE FROM notification_cooldown
+      WHERE last_notification_at < NOW() - INTERVAL '1 hour'
+    `);
+    
+    if (result.rowCount > 0) {
+      console.log(`✅ ${result.rowCount} registro(s) de cooldown expirado(s) removido(s)`);
+    } else {
+      console.log('✅ Nenhum registro expirado para remover');
+    }
+    
+    // Estatísticas da tabela
+    const stats = await db.query('SELECT COUNT(*) as total FROM notification_cooldown');
+    console.log(`📊 Total de registros ativos: ${stats.rows[0].total}`);
+    
+    console.log('\n========================================')
+    console.log('✅ Limpeza concluída!');
+    console.log('========================================\n');
+    
+  } catch (error) {
+    console.error('\n❌ ERRO durante limpeza:', error);
+    console.error('Stack trace:', error.stack);
+  }
+});
+
+// Endpoint manual para testar limpeza de cooldown
+app.post('/api/cleanup-cooldown-now', async (req, res) => {
+  console.log('\n=== LIMPEZA MANUAL DE COOLDOWN INICIADA ===\n');
+  
+  try {
+    // Remover registros com mais de 1 hora
+    const result = await db.query(`
+      DELETE FROM notification_cooldown
+      WHERE last_notification_at < NOW() - INTERVAL '1 hour'
+    `);
+    
+    // Estatísticas da tabela
+    const stats = await db.query('SELECT COUNT(*) as total FROM notification_cooldown');
+    
+    res.status(200).send({
+      success: true,
+      message: 'Limpeza concluída',
+      removed: result.rowCount,
+      remaining: parseInt(stats.rows[0].total)
+    });
+    
+  } catch (error) {
+    console.error('Erro na limpeza manual:', error);
+    res.status(500).send({
+      success: false,
+      error: error.message
+    });
   }
 });
 

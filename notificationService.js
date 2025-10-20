@@ -197,9 +197,8 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
  * @param {number} latitude - Latitude da localização
  * @param {number} longitude - Longitude da localização
  * @param {string} alertType - Tipo do alerta (rain_now, air_quality, wind, etc)
- * @param {string} severity - Severidade do alerta
  */
-async function recordNotificationSent(db, userId, latitude, longitude, alertType, severity) {
+async function recordNotificationSent(db, userId, latitude, longitude, alertType) {
   try {
     const query = `
       INSERT INTO notification_cooldown (user_id, latitude, longitude, alert_type, last_notification_at)
@@ -428,8 +427,7 @@ async function processWeatherAlerts(db, locationAlerts) {
               devicesToNotify[i].userId,
               locationData.latitude,
               locationData.longitude,
-              alert.type,
-              alert.severity
+              alert.type
             );
           }
         }

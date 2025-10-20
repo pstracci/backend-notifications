@@ -64,9 +64,8 @@ function getAirQualityLevel(aqi) {
  */
 function getWindLevel(windSpeed, windGusts) {
   const maxWind = Math.max(windSpeed, windGusts || 0);
-  if (maxWind < 30) return { level: 'calm', shouldAlert: false };
-  if (maxWind < 50) return { level: 'moderate', shouldAlert: true, description: 'Vento moderado' };
-  if (maxWind < 75) return { level: 'strong', shouldAlert: true, description: 'Vento forte' };
+  if (maxWind < 50) return { level: 'calm', shouldAlert: false };
+  if (maxWind < 70) return { level: 'strong', shouldAlert: true, description: 'Vento forte' };
   return { level: 'very_strong', shouldAlert: true, description: 'Vento muito forte' };
 }
 
@@ -168,11 +167,11 @@ async function getWeatherAlerts(latitude, longitude) {
     // ALERTA 6: RAJADAS PREVISTAS
     const next3hGusts = hourly.wind_gusts_10m.slice(0, 3);
     const maxGusts = Math.max(...next3hGusts);
-    if (maxGusts >= 40 && !windLevel.shouldAlert) {
+    if (maxGusts >= 60 && !windLevel.shouldAlert) {
       const hour = next3hGusts.indexOf(maxGusts) + 1;
       alerts.push({
-        type: 'wind_forecast', severity: 'moderate', value: maxGusts, hoursAhead: hour,
-        message: `Rajadas previstas em ${hour}h (${maxGusts.toFixed(0)} km/h)`,
+        type: 'wind_forecast', severity: 'strong', value: maxGusts, hoursAhead: hour,
+        message: `Rajadas fortes previstas em ${hour}h (${maxGusts.toFixed(0)} km/h)`,
         shouldNotify: true
       });
     }
