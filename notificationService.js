@@ -2,6 +2,7 @@
 // Serviço para gerenciar envio de notificações com diferentes intensidades
 
 const admin = require('./firebase-config');
+const { roundCoordinate } = require('./weatherService');
 
 /**
  * Obtém configuração de notificação baseada no tipo e severidade do alerta
@@ -167,6 +168,10 @@ async function removeInvalidTokens(db, invalidTokens) {
  */
 async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType) {
   try {
+    // Arredondar coordenadas para 2 casas decimais (~1.1km)
+    const roundedLat = roundCoordinate(latitude);
+    const roundedLon = roundCoordinate(longitude);
+    
     const query = `
       SELECT last_notification_at
       FROM notification_cooldown
@@ -174,12 +179,12 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
         AND last_notification_at > NOW() - INTERVAL '1 hour'
     `;
     
-    const { rows } = await db.query(query, [userId, latitude, longitude, alertType]);
+    const { rows } = await db.query(query, [userId, roundedLat, roundedLon, alertType]);
     
     if (rows.length > 0) {
       const lastNotification = new Date(rows[0].last_notification_at);
       const minutesAgo = Math.floor((Date.now() - lastNotification.getTime()) / 1000 / 60);
-      console.log(`⏳ Usuário ${userId} em cooldown para ${latitude}, ${longitude} (última notificação há ${minutesAgo} minutos)`);
+      console.log(`⏳ Usuário ${userId} em cooldown para ${roundedLat}, ${roundedLon} (última notificação há ${minutesAgo} minutos)`);
       return true;
     }
     
@@ -197,19 +202,27 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
  * @param {number} latitude - Latitude da localização
  * @param {number} longitude - Longitude da localização
  * @param {string} alertType - Tipo do alerta (rain_now, air_quality, wind, etc)
+ * @param {string} severity - Severidade do alerta (opcional)
+ * @param {number} alertValue - Valor do alerta (opcional)
  */
-async function recordNotificationSent(db, userId, latitude, longitude, alertType) {
+async function recordNotificationSent(db, userId, latitude, longitude, alertType, severity = null, alertValue = null) {
   try {
+    // Arredondar coordenadas para 2 casas decimais (~1.1km)
+    const roundedLat = roundCoordinate(latitude);
+    const roundedLon = roundCoordinate(longitude);
+    
     const query = `
-      INSERT INTO notification_cooldown (user_id, latitude, longitude, alert_type, last_notification_at)
-      VALUES ($1, $2, $3, $4, NOW())
+      INSERT INTO notification_cooldown (user_id, latitude, longitude, alert_type, severity, alert_value, last_notification_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       ON CONFLICT (user_id, latitude, longitude, alert_type)
       DO UPDATE SET
-        last_notification_at = NOW()
+        last_notification_at = NOW(),
+        severity = EXCLUDED.severity,
+        alert_value = EXCLUDED.alert_value
     `;
     
-    await db.query(query, [userId, latitude, longitude, alertType]);
-    console.log(`📝 Cooldown registrado para usuário ${userId} em ${latitude}, ${longitude} (${alertType})`);
+    await db.query(query, [userId, roundedLat, roundedLon, alertType, severity, alertValue]);
+    console.log(`📝 Cooldown registrado para usuário ${userId} em ${roundedLat}, ${roundedLon} (${alertType}, severity: ${severity}, value: ${alertValue})`);
   } catch (error) {
     console.error('Erro ao registrar cooldown:', error);
   }
@@ -427,7 +440,9 @@ async function processWeatherAlerts(db, locationAlerts) {
               devicesToNotify[i].userId,
               locationData.latitude,
               locationData.longitude,
-              alert.type
+              alert.type,
+              alert.severity,
+              alert.value
             );
           }
         }
