@@ -368,19 +368,30 @@
             // Carrega a lista de usuários
             async function loadUsers() {
                 try {
+                    console.log('Carregando usuários...');
                     const response = await fetch('/api/admin/users');
-                    if (!response.ok) throw new Error('Erro ao carregar usuários');
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Erro na resposta:', errorText);
+                        throw new Error('Erro ao carregar usuários');
+                    }
                     
                     users = await response.json();
+                    console.log('Usuários carregados:', users.length);
+                    console.log('Primeiro usuário:', users[0]);
+                    
                     renderUsers(users);
                     loadingUsers.style.display = 'none';
                     loadStats();
                 } catch (error) {
-                    console.error('Erro:', error);
-                    showAlert('Erro ao carregar usuários', 'danger');
+                    console.error('Erro detalhado:', error);
+                    showAlert('Erro ao carregar usuários: ' + error.message, 'danger');
                     loadingUsers.innerHTML = `
                         <div class="alert alert-danger">
                             Erro ao carregar usuários. <button onclick="window.location.reload()" class="btn btn-sm btn-outline-danger">Tentar novamente</button>
+                            <div class="small mt-2">Erro: ${error.message}</div>
                         </div>
                     `;
                 }
@@ -388,14 +399,16 @@
 
             // Renderiza a lista de usuários
             function renderUsers(users) {
-                usersList.innerHTML = '';
-                
-                if (users.length === 0) {
-                    usersList.innerHTML = '<div class="text-muted text-center py-3">Nenhum usuário encontrado</div>';
-                    return;
-                }
+                try {
+                    usersList.innerHTML = '';
+                    
+                    if (users.length === 0) {
+                        usersList.innerHTML = '<div class="text-muted text-center py-3">Nenhum usuário encontrado</div>';
+                        return;
+                    }
 
-                users.forEach(user => {
+                    users.forEach((user, index) => {
+                        try {
                     const userElement = document.createElement('button');
                     userElement.className = 'list-group-item list-group-item-action user-card';
                     
@@ -410,20 +423,26 @@
                     
                     let locationInfo = '';
                     if (user.latitude && user.longitude) {
+                        const lat = parseFloat(user.latitude);
+                        const lon = parseFloat(user.longitude);
                         locationInfo = `
                             <div class="mt-1">
-                                <small class="text-muted">📍 ${user.latitude.toFixed(4)}, ${user.longitude.toFixed(4)}</small>
+                                <small class="text-muted">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</small>
                                 <small class="text-muted ms-2" id="location-${user.id}">🔍 Carregando...</small>
                             </div>
                         `;
                     }
                     
+                    const deviceCount = user.device_count || 0;
+                    const userUid = user.uid || 'sem-uid';
+                    const userEmail = user.email || 'Usuário sem e-mail';
+                    
                     userElement.innerHTML = `
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
-                                <h6 class="mb-1">${user.email || 'Usuário sem e-mail'}</h6>
-                                <small class="text-muted">ID: ${user.uid.substring(0, 12)}...</small>
-                                <small class="text-muted ms-2">📱 ${user.device_count} dispositivo(s)</small>
+                                <h6 class="mb-1">${userEmail}</h6>
+                                <small class="text-muted">ID: ${userUid.substring(0, 12)}...</small>
+                                <small class="text-muted ms-2">📱 ${deviceCount} dispositivo(s)</small>
                                 ${locationInfo}
                             </div>
                             <div class="text-end">
@@ -437,9 +456,16 @@
                     
                     // Buscar nome da localização
                     if (user.latitude && user.longitude) {
-                        getLocationName(user.latitude, user.longitude, user.id);
+                        getLocationName(parseFloat(user.latitude), parseFloat(user.longitude), user.id);
                     }
-                });
+                        } catch (userError) {
+                            console.error(`Erro ao renderizar usuário ${index}:`, userError, user);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Erro ao renderizar usuários:', error);
+                    usersList.innerHTML = '<div class="alert alert-danger">Erro ao exibir usuários</div>';
+                }
             }
 
             // Seleciona um usuário
