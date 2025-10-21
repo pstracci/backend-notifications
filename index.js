@@ -280,11 +280,11 @@ app.post('/api/test-notification', async (req, res) => {
 
 // --- LÓGICA DO AGENDADOR (CRON JOBS) ---
 
-// CRON 1: Verificação de alertas meteorológicos gerais
-// Executa a cada 15 minutos (0, 15, 30, 45)
+// CRON 1: Verificação de alertas meteorológicos (chuva)
+// Executa a cada 15 minutos (0, 15, 30, 45) - para alertas de chuva
 cron.schedule('0,15,30,45 * * * *', async () => {
   console.log('\n========================================')
-  console.log('🌡️ Executando verificação de alertas meteorológicos...');
+  console.log('🌧️ Executando verificação de alertas de CHUVA...');
   console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
   console.log('========================================\n');
   
@@ -312,7 +312,39 @@ cron.schedule('0,15,30,45 * * * *', async () => {
   }
 });
 
-// CRON 2: Limpeza de registros de cooldown expirados
+// CRON 2: Verificação de alertas meteorológicos (UV, ar, vento)
+// Executa a cada hora no minuto 0 (0:00, 1:00, 2:00, etc)
+cron.schedule('0 * * * *', async () => {
+  console.log('\n========================================')
+  console.log('🌡️ Executando verificação de alertas UV/AR/VENTO...');
+  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('========================================\n');
+  
+  try {
+    // 1. Verificar alertas meteorológicos para todas as localizações
+    const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
+    
+    if (locationAlerts.length === 0) {
+      console.log('✅ Sem alertas meteorológicos no momento.');
+      return;
+    }
+    
+    console.log(`\n⚠️ Alertas detectados em ${locationAlerts.length} localização(ões)!\n`);
+    
+    // 2. Processar alertas e enviar notificações
+    const summary = await notificationService.processWeatherAlerts(db, locationAlerts);
+    
+    console.log('\n========================================')
+    console.log('✅ Verificação concluída!');
+    console.log('========================================\n');
+    
+  } catch (error) {
+    console.error('\n❌ ERRO durante verificação:', error);
+    console.error('Stack trace:', error.stack);
+  }
+});
+
+// CRON 3: Limpeza de registros de cooldown expirados
 // Executa a cada hora no minuto 5 (5, 1:05, 2:05, etc)
 cron.schedule('5 * * * *', async () => {
   console.log('\n========================================')
@@ -321,14 +353,26 @@ cron.schedule('5 * * * *', async () => {
   console.log('========================================\n');
   
   try {
-    // Remover registros com mais de 1 hora
-    const result = await db.query(`
+    // Remover registros de chuva com mais de 2 horas
+    const rainResult = await db.query(`
       DELETE FROM notification_cooldown
-      WHERE last_notification_at < NOW() - INTERVAL '1 hour'
+      WHERE alert_type IN ('rain_now', 'rain_forecast')
+        AND last_notification_at < NOW() - INTERVAL '2 hours'
     `);
     
-    if (result.rowCount > 0) {
-      console.log(`✅ ${result.rowCount} registro(s) de cooldown expirado(s) removido(s)`);
+    // Remover registros de UV/ar/vento com mais de 8 horas
+    const otherResult = await db.query(`
+      DELETE FROM notification_cooldown
+      WHERE alert_type IN ('uv_high', 'air_quality', 'wind', 'wind_forecast')
+        AND last_notification_at < NOW() - INTERVAL '8 hours'
+    `);
+    
+    const totalRemoved = rainResult.rowCount + otherResult.rowCount;
+    
+    if (totalRemoved > 0) {
+      console.log(`✅ ${rainResult.rowCount} registro(s) de chuva removido(s) (>2h)`);
+      console.log(`✅ ${otherResult.rowCount} registro(s) de UV/ar/vento removido(s) (>8h)`);
+      console.log(`📊 Total removido: ${totalRemoved}`);
     } else {
       console.log('✅ Nenhum registro expirado para remover');
     }

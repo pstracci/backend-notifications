@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌧️ Painel Admin - Notificações de Chuva</title>
+    <title>🌦️ Painel Admin - Notificações Meteorológicas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -84,8 +84,8 @@
 <body>
     <div class="container">
         <div class="text-center mb-5">
-            <h1 class="display-4 text-white fw-bold mb-2">🌧️ Painel Admin</h1>
-            <p class="text-white-50 fs-5">Sistema de Notificações de Chuva</p>
+            <h1 class="display-4 text-white fw-bold mb-2">🌦️ Painel Admin</h1>
+            <p class="text-white-50 fs-5">Sistema de Notificações Meteorológicas</p>
         </div>
         
         <!-- Estatísticas -->
@@ -143,38 +143,29 @@
                 <form id="sendNotificationForm">
                     <input type="hidden" id="userId" name="userId">
                     
-                    <!-- Seleção de Intensidade -->
+                    <!-- Seleção de Tipo de Alerta -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">🌧️ Intensidade da Chuva</label>
-                        <div class="row g-2">
-                            <div class="col-6 col-md-3">
-                                <button type="button" class="btn btn-secondary w-100 intensity-btn" data-intensity="light">
-                                    <div class="fs-3">🌦️</div>
-                                    <div class="small">Leve</div>
-                                    <div class="x-small text-white-50">0.5-2.5 mm/h</div>
-                                </button>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <button type="button" class="btn btn-primary w-100 intensity-btn" data-intensity="moderate">
-                                    <div class="fs-3">🌧️</div>
-                                    <div class="small">Moderada</div>
-                                    <div class="x-small text-white-50">2.5-10 mm/h</div>
-                                </button>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <button type="button" class="btn btn-warning w-100 intensity-btn" data-intensity="heavy">
-                                    <div class="fs-3">⛈️</div>
-                                    <div class="small">Forte</div>
-                                    <div class="x-small text-white-50">10-50 mm/h</div>
-                                </button>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <button type="button" class="btn btn-danger w-100 intensity-btn" data-intensity="extreme">
-                                    <div class="fs-3">🚨</div>
-                                    <div class="small">Extrema</div>
-                                    <div class="x-small text-white-50">&gt;50 mm/h</div>
-                                </button>
-                            </div>
+                        <label class="form-label fw-bold">📊 Tipo de Alerta</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="alertType" id="alertRain" value="rain" checked>
+                            <label class="btn btn-outline-primary" for="alertRain">🌧️ Chuva</label>
+                            
+                            <input type="radio" class="btn-check" name="alertType" id="alertUV" value="uv">
+                            <label class="btn btn-outline-warning" for="alertUV">☀️ UV</label>
+                            
+                            <input type="radio" class="btn-check" name="alertType" id="alertAir" value="air_quality">
+                            <label class="btn btn-outline-info" for="alertAir">😷 Ar</label>
+                            
+                            <input type="radio" class="btn-check" name="alertType" id="alertWind" value="wind">
+                            <label class="btn btn-outline-secondary" for="alertWind">💨 Vento</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Seleção de Intensidade (dinâmica) -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" id="intensityLabel">🌧️ Intensidade da Chuva</label>
+                        <div class="row g-2" id="intensityButtons">
+                            <!-- Botões serão inseridos dinamicamente -->
                         </div>
                         <input type="hidden" id="intensity" name="intensity" value="moderate">
                     </div>
@@ -248,33 +239,111 @@
 
             let users = [];
             let selectedIntensity = 'moderate';
+            let selectedAlertType = 'rain';
             let notificationsSent = 0;
+            
+            // Buscar nome da localização usando API de geocoding reverso
+            async function getLocationName(lat, lon, userId) {
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`);
+                    const data = await response.json();
+                    
+                    const locationElement = document.getElementById(`location-${userId}`);
+                    if (locationElement && data.address) {
+                        const city = data.address.city || data.address.town || data.address.village || data.address.suburb || '';
+                        const state = data.address.state || '';
+                        locationElement.textContent = `${city}, ${state}`.trim() || 'Localização desconhecida';
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar localização:', error);
+                    const locationElement = document.getElementById(`location-${userId}`);
+                    if (locationElement) {
+                        locationElement.textContent = '';
+                    }
+                }
+            }
 
-            // Configurações de notificação por intensidade
+            // Configurações de notificação por tipo e intensidade
             const notificationConfigs = {
-                light: {
-                    icon: '🌦️',
-                    title: 'Chuva Fraca se Aproximando',
-                    body: 'Chuva leve prevista nos próximos 30 minutos (1.5 mm/h). Leve um guarda-chuva!',
-                    precipitation: 1.5
+                rain: {
+                    light: {
+                        icon: '🌦️',
+                        title: 'Chuva Fraca se Aproximando',
+                        body: 'Chuva leve prevista nos próximos 30 minutos (1.5 mm/h). Leve um guarda-chuva!',
+                        value: 1.5
+                    },
+                    moderate: {
+                        icon: '🌧️',
+                        title: 'Chuva Moderada se Aproximando',
+                        body: 'Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!',
+                        value: 5.0
+                    },
+                    heavy: {
+                        icon: '⛈️',
+                        title: 'CHUVA FORTE se Aproximando!',
+                        body: 'ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (25.0 mm/h). Busque abrigo!',
+                        value: 25.0
+                    },
+                    extreme: {
+                        icon: '🚨',
+                        title: 'ALERTA: CHUVA EXTREMA!',
+                        body: 'ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (75.0 mm/h). BUSQUE ABRIGO IMEDIATAMENTE!',
+                        value: 75.0
+                    }
                 },
-                moderate: {
-                    icon: '🌧️',
-                    title: 'Chuva Moderada se Aproximando',
-                    body: 'Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!',
-                    precipitation: 5.0
+                uv: {
+                    high: {
+                        icon: '☀️',
+                        title: 'Índice UV Alto',
+                        body: 'Índice UV alto (8.5). Use protetor solar e evite exposição prolongada ao sol.',
+                        value: 8.5
+                    },
+                    very_high: {
+                        icon: '☀️',
+                        title: 'Índice UV Muito Alto',
+                        body: 'Índice UV muito alto (10.2). Use protetor solar FPS 50+ e evite sol entre 10h-16h.',
+                        value: 10.2
+                    },
+                    extreme: {
+                        icon: '🔥',
+                        title: 'ALERTA: Índice UV EXTREMO',
+                        body: 'ATENÇÃO: Índice UV extremo (12.5). Evite exposição ao sol! Risco de queimaduras graves.',
+                        value: 12.5
+                    }
                 },
-                heavy: {
-                    icon: '⛈️',
-                    title: 'CHUVA FORTE se Aproximando!',
-                    body: 'ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (25.0 mm/h). Busque abrigo!',
-                    precipitation: 25.0
+                air_quality: {
+                    moderate: {
+                        icon: '😷',
+                        title: 'Qualidade do Ar Moderada',
+                        body: 'Qualidade do ar moderada (AQI: 55). Pessoas sensíveis devem reduzir atividades ao ar livre.',
+                        value: 55
+                    },
+                    poor: {
+                        icon: '⚠️',
+                        title: 'Qualidade do Ar Ruim',
+                        body: 'Qualidade do ar ruim (AQI: 75). Evite atividades prolongadas ao ar livre.',
+                        value: 75
+                    },
+                    very_poor: {
+                        icon: '🚨',
+                        title: 'Qualidade do Ar Muito Ruim',
+                        body: 'ALERTA: Qualidade do ar muito ruim (AQI: 95). Evite sair de casa!',
+                        value: 95
+                    }
                 },
-                extreme: {
-                    icon: '🚨',
-                    title: 'ALERTA: CHUVA EXTREMA!',
-                    body: 'ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (75.0 mm/h). BUSQUE ABRIGO IMEDIATAMENTE!',
-                    precipitation: 75.0
+                wind: {
+                    strong: {
+                        icon: '💨',
+                        title: 'Vento Forte',
+                        body: 'Vento forte detectado (60 km/h). Tenha cuidado ao ar livre.',
+                        value: 60
+                    },
+                    very_strong: {
+                        icon: '🌪️',
+                        title: 'Vento Muito Forte',
+                        body: 'ALERTA: Vento muito forte (85 km/h). Evite áreas abertas!',
+                        value: 85
+                    }
                 }
             };
 
@@ -329,18 +398,47 @@
                 users.forEach(user => {
                     const userElement = document.createElement('button');
                     userElement.className = 'list-group-item list-group-item-action user-card';
-                    userElement.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">${user.email || 'Usuário sem e-mail'}</h6>
-                                <small class="text-muted">ID: ${user.uid}</small>
+                    
+                    const createdDate = new Date(user.created_at);
+                    const formattedDate = createdDate.toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    let locationInfo = '';
+                    if (user.latitude && user.longitude) {
+                        locationInfo = `
+                            <div class="mt-1">
+                                <small class="text-muted">📍 ${user.latitude.toFixed(4)}, ${user.longitude.toFixed(4)}</small>
+                                <small class="text-muted ms-2" id="location-${user.id}">🔍 Carregando...</small>
                             </div>
-                            <small class="text-muted">${new Date(user.created_at).toLocaleDateString('pt-BR')}</small>
+                        `;
+                    }
+                    
+                    userElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${user.email || 'Usuário sem e-mail'}</h6>
+                                <small class="text-muted">ID: ${user.uid.substring(0, 12)}...</small>
+                                <small class="text-muted ms-2">📱 ${user.device_count} dispositivo(s)</small>
+                                ${locationInfo}
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${formattedDate}</small>
+                            </div>
                         </div>
                     `;
                     
                     userElement.addEventListener('click', () => selectUser(user));
                     usersList.appendChild(userElement);
+                    
+                    // Buscar nome da localização
+                    if (user.latitude && user.longitude) {
+                        getLocationName(user.latitude, user.longitude, user.id);
+                    }
                 });
             }
 
@@ -365,9 +463,70 @@
                 notificationForm.scrollIntoView({ behavior: 'smooth' });
             }
 
+            // Renderiza botões de intensidade baseado no tipo de alerta
+            function renderIntensityButtons(alertType) {
+                const intensityButtonsContainer = document.getElementById('intensityButtons');
+                const intensityLabel = document.getElementById('intensityLabel');
+                intensityButtonsContainer.innerHTML = '';
+                
+                const labels = {
+                    rain: '🌧️ Intensidade da Chuva',
+                    uv: '☀️ Nível de UV',
+                    air_quality: '😷 Qualidade do Ar',
+                    wind: '💨 Intensidade do Vento'
+                };
+                
+                intensityLabel.textContent = labels[alertType] || 'Intensidade';
+                
+                const configs = notificationConfigs[alertType];
+                const intensities = Object.keys(configs);
+                
+                const buttonColors = {
+                    rain: { light: 'secondary', moderate: 'primary', heavy: 'warning', extreme: 'danger' },
+                    uv: { high: 'warning', very_high: 'warning', extreme: 'danger' },
+                    air_quality: { moderate: 'info', poor: 'warning', very_poor: 'danger' },
+                    wind: { strong: 'secondary', very_strong: 'warning' }
+                };
+                
+                intensities.forEach((intensity, index) => {
+                    const config = configs[intensity];
+                    const colorClass = buttonColors[alertType][intensity] || 'primary';
+                    const isActive = index === 0 ? 'active' : '';
+                    
+                    const col = document.createElement('div');
+                    col.className = `col-${12 / intensities.length}`;
+                    col.innerHTML = `
+                        <button type="button" class="btn btn-${colorClass} w-100 intensity-btn ${isActive}" data-intensity="${intensity}">
+                            <div class="fs-3">${config.icon}</div>
+                            <div class="small text-capitalize">${intensity.replace('_', ' ')}</div>
+                        </button>
+                    `;
+                    intensityButtonsContainer.appendChild(col);
+                });
+                
+                // Seleciona primeira intensidade por padrão
+                selectedIntensity = intensities[0];
+                document.getElementById('intensity').value = selectedIntensity;
+                
+                // Adiciona event listeners aos novos botões
+                document.querySelectorAll('.intensity-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        selectedIntensity = this.dataset.intensity;
+                        document.getElementById('intensity').value = selectedIntensity;
+                        updatePreview();
+                    });
+                });
+                
+                updatePreview();
+            }
+
             // Atualiza preview da notificação
             function updatePreview() {
-                const config = notificationConfigs[selectedIntensity];
+                const config = notificationConfigs[selectedAlertType][selectedIntensity];
+                if (!config) return;
+                
                 previewIcon.textContent = config.icon;
                 
                 if (customMessageCheckbox.checked) {
@@ -381,19 +540,13 @@
                 }
             }
 
-            // Gerencia botões de intensidade
-            document.querySelectorAll('.intensity-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    selectedIntensity = this.dataset.intensity;
-                    intensityInput.value = selectedIntensity;
-                    updatePreview();
+            // Gerencia mudança de tipo de alerta
+            document.querySelectorAll('input[name="alertType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    selectedAlertType = this.value;
+                    renderIntensityButtons(selectedAlertType);
                 });
             });
-
-            // Ativa intensidade padrão (moderate)
-            document.querySelector('[data-intensity="moderate"]').classList.add('active');
 
             // Toggle de mensagem personalizada
             customMessageCheckbox.addEventListener('change', function() {
@@ -406,13 +559,13 @@
             document.getElementById('message')?.addEventListener('input', updatePreview);
 
             // Envia a notificação
-            async function sendNotification(userId, intensity, customTitle, customMessage) {
+            async function sendNotification(userId, alertType, intensity, customTitle, customMessage) {
                 try {
                     submitBtn.disabled = true;
                     submitBtnText.textContent = '📤 Enviando...';
                     submitSpinner.classList.remove('d-none');
 
-                    const config = notificationConfigs[intensity];
+                    const config = notificationConfigs[alertType][intensity];
                     const title = customTitle || config.title;
                     const message = customMessage || config.body;
 
@@ -425,8 +578,9 @@
                             userId, 
                             title, 
                             message,
+                            alertType,
                             intensity,
-                            precipitation: config.precipitation
+                            value: config.value
                         })
                     });
 
@@ -477,6 +631,7 @@
             document.getElementById('sendNotificationForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const userId = userIdInput.value;
+                const alertType = document.querySelector('input[name="alertType"]:checked').value;
                 const intensity = intensityInput.value;
                 const customTitle = customMessageCheckbox.checked ? document.getElementById('title').value : '';
                 const customMessage = customMessageCheckbox.checked ? document.getElementById('message').value : '';
@@ -491,12 +646,12 @@
                     return;
                 }
                 
-                sendNotification(userId, intensity, customTitle, customMessage);
+                sendNotification(userId, alertType, intensity, customTitle, customMessage);
             });
 
             // Inicializa a página
             loadUsers();
-            updatePreview();
+            renderIntensityButtons('rain'); // Inicia com chuva
         });
     </script>
 </body>

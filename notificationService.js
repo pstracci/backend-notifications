@@ -5,6 +5,20 @@ const admin = require('./firebase-config');
 const { roundCoordinate } = require('./weatherService');
 
 /**
+ * Retorna o intervalo de cooldown em horas para cada tipo de alerta
+ * @param {string} alertType - Tipo do alerta
+ * @returns {number} Horas de cooldown
+ */
+function getCooldownHours(alertType) {
+  // UV, qualidade do ar e vento: 6 horas
+  if (['uv_high', 'air_quality', 'wind', 'wind_forecast'].includes(alertType)) {
+    return 6;
+  }
+  // Chuva e outros: 1 hora
+  return 1;
+}
+
+/**
  * Obtém configuração de notificação baseada no tipo e severidade do alerta
  * @param {Object} alert - Objeto do alerta contendo type, severity, value e message
  * @returns {Object} Configuração da notificação
@@ -172,11 +186,14 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
     const roundedLat = roundCoordinate(latitude);
     const roundedLon = roundCoordinate(longitude);
     
+    // Obter cooldown específico para o tipo de alerta
+    const cooldownHours = getCooldownHours(alertType);
+    
     const query = `
       SELECT last_notification_at
       FROM notification_cooldown
       WHERE user_id = $1 AND latitude = $2 AND longitude = $3 AND alert_type = $4
-        AND last_notification_at > NOW() - INTERVAL '1 hour'
+        AND last_notification_at > NOW() - INTERVAL '${cooldownHours} hours'
     `;
     
     const { rows } = await db.query(query, [userId, roundedLat, roundedLon, alertType]);
@@ -184,7 +201,8 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
     if (rows.length > 0) {
       const lastNotification = new Date(rows[0].last_notification_at);
       const minutesAgo = Math.floor((Date.now() - lastNotification.getTime()) / 1000 / 60);
-      console.log(`⏳ Usuário ${userId} em cooldown para ${roundedLat}, ${roundedLon} (última notificação há ${minutesAgo} minutos)`);
+      const hoursAgo = (minutesAgo / 60).toFixed(1);
+      console.log(`⏳ Usuário ${userId} em cooldown para ${roundedLat}, ${roundedLon} (${alertType}: última há ${hoursAgo}h, cooldown: ${cooldownHours}h)`);
       return true;
     }
     
