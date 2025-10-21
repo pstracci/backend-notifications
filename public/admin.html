@@ -118,6 +118,26 @@
                 <h5 class="mb-0"><i class="bi bi-people-fill"></i> Lista de Usuários</h5>
             </div>
             <div class="card-body">
+                <!-- Filtros de Pesquisa -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="filterEmail" placeholder="🔍 Buscar por email...">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="filterName" placeholder="🔍 Buscar por nome...">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="filterCity" placeholder="🔍 Buscar por cidade...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterDevice">
+                            <option value="">📱 Todos os usuários</option>
+                            <option value="with">Com dispositivo</option>
+                            <option value="without">Sem dispositivo</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div id="loadingUsers" class="text-center py-3">
                     <div class="spinner-border" role="status">
                         <span class="visually-hidden">Carregando...</span>
@@ -126,6 +146,18 @@
                 </div>
                 <div id="usersList" class="list-group">
                     <!-- Usuários serão inseridos aqui via JavaScript -->
+                </div>
+                
+                <!-- Paginação -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <small class="text-muted">Mostrando <span id="showingCount">0</span> de <span id="totalCount">0</span> usuários</small>
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="pagination">
+                            <!-- Paginação será inserida aqui -->
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -238,29 +270,192 @@
             const customMessageFields = document.getElementById('customMessageFields');
 
             let users = [];
+            let filteredUsers = [];
             let selectedIntensity = 'moderate';
             let selectedAlertType = 'rain';
             let notificationsSent = 0;
+            let currentPage = 1;
+            const usersPerPage = 20;
+            const locationCache = {}; // Cache para evitar múltiplas requisições
+            const userLocations = {}; // Armazena localizações dos usuários
             
             // Buscar nome da localização usando API de geocoding reverso
             async function getLocationName(lat, lon, userId) {
+                const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+                const locationElement = document.getElementById(`location-${userId}`);
+                
+                // Verifica cache
+                if (locationCache[cacheKey]) {
+                    if (locationElement) {
+                        locationElement.textContent = locationCache[cacheKey];
+                    }
+                    return;
+                }
+                
                 try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`);
+                    // Adiciona delay para evitar rate limit (1 req/sec)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.random()));
+                    
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+                        {
+                            headers: {
+                                'User-Agent': 'WeatherNotificationApp/1.0'
+                            }
+                        }
+                    );
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
                     const data = await response.json();
                     
-                    const locationElement = document.getElementById(`location-${userId}`);
                     if (locationElement && data.address) {
-                        const city = data.address.city || data.address.town || data.address.village || data.address.suburb || '';
-                        const state = data.address.state || '';
-                        locationElement.textContent = `${city}, ${state}`.trim() || 'Localização desconhecida';
+                        // Monta endereço mais específico
+                        const parts = [];
+                        
+                        // Rua/Avenida
+                        if (data.address.road) {
+                            parts.push(data.address.road);
+                        }
+                        
+                        // Bairro
+                        if (data.address.suburb || data.address.neighbourhood) {
+                            parts.push(data.address.suburb || data.address.neighbourhood);
+                        }
+                        
+                        // Cidade
+                        const city = data.address.city || data.address.town || data.address.village || data.address.municipality;
+                        if (city) {
+                            parts.push(city);
+                        }
+                        
+                        // Estado
+                        if (data.address.state) {
+                            parts.push(data.address.state);
+                        }
+                        
+                        const locationText = parts.join(', ') || 'Localização desconhecida';
+                        locationElement.textContent = locationText;
+                        locationCache[cacheKey] = locationText;
+                        userLocations[userId] = locationText; // Armazena para filtro
                     }
                 } catch (error) {
-                    console.error('Erro ao buscar localização:', error);
-                    const locationElement = document.getElementById(`location-${userId}`);
+                    console.warn(`Erro ao buscar localização para usuário ${userId}:`, error.message);
                     if (locationElement) {
-                        locationElement.textContent = '';
+                        locationElement.textContent = '📍 Localização não disponível';
+                        locationCache[cacheKey] = '📍 Localização não disponível';
+                        userLocations[userId] = '';
                     }
                 }
+            }
+            
+            // Filtra usuários baseado nos critérios
+            function filterUsers() {
+                const emailFilter = document.getElementById('filterEmail').value.toLowerCase();
+                const nameFilter = document.getElementById('filterName').value.toLowerCase();
+                const cityFilter = document.getElementById('filterCity').value.toLowerCase();
+                const deviceFilter = document.getElementById('filterDevice').value;
+                
+                filteredUsers = users.filter(user => {
+                    // Filtro por email
+                    if (emailFilter && !(user.email || '').toLowerCase().includes(emailFilter)) {
+                        return false;
+                    }
+                    
+                    // Filtro por nome
+                    if (nameFilter && !(user.name || '').toLowerCase().includes(nameFilter)) {
+                        return false;
+                    }
+                    
+                    // Filtro por cidade
+                    if (cityFilter) {
+                        const location = userLocations[user.id] || '';
+                        if (!location.toLowerCase().includes(cityFilter)) {
+                            return false;
+                        }
+                    }
+                    
+                    // Filtro por dispositivo
+                    if (deviceFilter === 'with' && (!user.device_count || user.device_count === 0)) {
+                        return false;
+                    }
+                    if (deviceFilter === 'without' && user.device_count > 0) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                currentPage = 1;
+                renderUsers(filteredUsers);
+                renderPagination();
+            }
+            
+            // Renderiza paginação
+            function renderPagination() {
+                const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+                const paginationElement = document.getElementById('pagination');
+                paginationElement.innerHTML = '';
+                
+                // Atualiza contador
+                const start = (currentPage - 1) * usersPerPage + 1;
+                const end = Math.min(currentPage * usersPerPage, filteredUsers.length);
+                document.getElementById('showingCount').textContent = filteredUsers.length > 0 ? `${start}-${end}` : '0';
+                document.getElementById('totalCount').textContent = filteredUsers.length;
+                
+                if (totalPages <= 1) return;
+                
+                // Botão anterior
+                const prevLi = document.createElement('li');
+                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#">«</a>`;
+                prevLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderUsers(filteredUsers);
+                        renderPagination();
+                    }
+                });
+                paginationElement.appendChild(prevLi);
+                
+                // Páginas
+                const maxPages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+                let endPage = Math.min(totalPages, startPage + maxPages - 1);
+                
+                if (endPage - startPage < maxPages - 1) {
+                    startPage = Math.max(1, endPage - maxPages + 1);
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    li.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        currentPage = i;
+                        renderUsers(filteredUsers);
+                        renderPagination();
+                    });
+                    paginationElement.appendChild(li);
+                }
+                
+                // Botão próximo
+                const nextLi = document.createElement('li');
+                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#">»</a>`;
+                nextLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderUsers(filteredUsers);
+                        renderPagination();
+                    }
+                });
+                paginationElement.appendChild(nextLi);
             }
 
             // Configurações de notificação por tipo e intensidade
@@ -379,10 +574,12 @@
                     }
                     
                     users = await response.json();
+                    filteredUsers = users;
                     console.log('Usuários carregados:', users.length);
                     console.log('Primeiro usuário:', users[0]);
                     
-                    renderUsers(users);
+                    renderUsers(filteredUsers);
+                    renderPagination();
                     loadingUsers.style.display = 'none';
                     loadStats();
                 } catch (error) {
@@ -398,16 +595,21 @@
             }
 
             // Renderiza a lista de usuários
-            function renderUsers(users) {
+            function renderUsers(usersToRender) {
                 try {
                     usersList.innerHTML = '';
                     
-                    if (users.length === 0) {
+                    if (usersToRender.length === 0) {
                         usersList.innerHTML = '<div class="text-muted text-center py-3">Nenhum usuário encontrado</div>';
                         return;
                     }
 
-                    users.forEach((user, index) => {
+                    // Paginação
+                    const start = (currentPage - 1) * usersPerPage;
+                    const end = start + usersPerPage;
+                    const paginatedUsers = usersToRender.slice(start, end);
+
+                    paginatedUsers.forEach((user, index) => {
                         try {
                     const userElement = document.createElement('button');
                     userElement.className = 'list-group-item list-group-item-action user-card';
@@ -674,6 +876,12 @@
                 
                 sendNotification(userId, alertType, intensity, customTitle, customMessage);
             });
+
+            // Event listeners para filtros
+            document.getElementById('filterEmail').addEventListener('input', filterUsers);
+            document.getElementById('filterName').addEventListener('input', filterUsers);
+            document.getElementById('filterCity').addEventListener('input', filterUsers);
+            document.getElementById('filterDevice').addEventListener('change', filterUsers);
 
             // Inicializa a página
             loadUsers();
