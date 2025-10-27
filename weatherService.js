@@ -112,8 +112,11 @@ async function getWeatherAlerts(latitude, longitude) {
       });
     }
 
+    const currentHour = new Date(current.time).getHours();
+    const currentHourIndex = currentHour; // Array começa em 0 para 00:00
+
     // ALERTA 2: PREVISÃO DE CHUVA (3h)
-    const next3h = hourly.precipitation.slice(0, 3);
+    const next3h = hourly.precipitation.slice(currentHourIndex, currentHourIndex + 3);
     const maxRain = Math.max(...next3h);
     if (maxRain > 0.5) {
       const level = getRainIntensityLevel(maxRain);
@@ -121,7 +124,7 @@ async function getWeatherAlerts(latitude, longitude) {
       alerts.push({
         type: 'rain_forecast', severity: level, value: maxRain, hoursAhead: hour,
         message: `Chuva prevista em ${hour}h (${maxRain.toFixed(1)} mm)`,
-        shouldNotify: level !== 'none' && level !== 'light'
+        shouldNotify: level !== 'none'
       });
     }
 
@@ -165,7 +168,7 @@ async function getWeatherAlerts(latitude, longitude) {
     }
 
     // ALERTA 6: RAJADAS PREVISTAS
-    const next3hGusts = hourly.wind_gusts_10m.slice(0, 3);
+    const next3hGusts = hourly.wind_gusts_10m.slice(currentHourIndex, currentHourIndex + 3);
     const maxGusts = Math.max(...next3hGusts);
     if (maxGusts >= 60 && !windLevel.shouldAlert) {
       const hour = next3hGusts.indexOf(maxGusts) + 1;
