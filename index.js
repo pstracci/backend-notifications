@@ -27,7 +27,7 @@ app.post('/api/auth/verify', async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    return res.status(401).send({ error: 'Token de autenticação não fornecido.' });
+    return res.status(401).send({ error: 'Authentication token not provided.' });
   }
 
   try {
@@ -35,7 +35,7 @@ app.post('/api/auth/verify', async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(token);
     const uid = decodedToken.uid;
 
-    console.log(`Token verificado com sucesso para o UID: ${uid}`);
+    console.log(`Token successfully verified for UID: ${uid}`);
 
     // 2. Verifica se o usuário já existe no nosso banco de dados
     const findUserQuery = 'SELECT * FROM users WHERE uid = $1';
@@ -45,13 +45,13 @@ app.post('/api/auth/verify', async (req, res) => {
 
     if (rows.length === 0) {
       // 3. Se o usuário NÃO existe, cria um novo registro
-      console.log(`Usuário com UID ${uid} não encontrado. Criando novo registro.`);
+      console.log(`User with UID ${uid} not found. Creating a new record.`);
       const insertUserQuery = 'INSERT INTO users (uid) VALUES ($1) RETURNING *';
       const newUserResult = await db.query(insertUserQuery, [uid]);
       user = newUserResult.rows[0];
     } else {
       // 4. Se o usuário JÁ existe, apenas o seleciona
-      console.log(`Usuário com UID ${uid} já existe no banco de dados.`);
+      console.log(`User with UID ${uid} already exists in the database.`);
       user = rows[0];
     }
     
@@ -59,9 +59,9 @@ app.post('/api/auth/verify', async (req, res) => {
     res.status(200).send({ success: true, user: user });
 
   } catch (error) {
-    console.error('Erro ao verificar token ou ao processar usuário:', error);
+    console.error('Error verifying token or processing user:', error);
     // O token pode ser inválido ou expirado
-    res.status(403).send({ error: 'Falha na autenticação. Token inválido.' });
+    res.status(403).send({ error: 'Authentication failed. Invalid token.' });
   }
 });
 
@@ -74,11 +74,11 @@ app.put('/api/users/location', authMiddleware, async (req, res) => {
   const { latitude, longitude } = req.body;
 
   if (latitude === undefined || longitude === undefined) {
-    return res.status(400).send({ error: 'Latitude e Longitude são obrigatórias.' });
+    return res.status(400).send({ error: 'Latitude and longitude are required.' });
   }
 
   try {
-    console.log(`Atualizando localização para o UID ${uid}: Lat ${latitude}, Lon ${longitude}`);
+    console.log(`Updating location for UID ${uid}: Lat ${latitude}, Lon ${longitude}`);
 
     const updateUserLocationQuery = `
       UPDATE users 
@@ -93,14 +93,14 @@ app.put('/api/users/location', authMiddleware, async (req, res) => {
     const { rows } = await db.query(updateUserLocationQuery, [latitude, longitude, uid]);
 
     if (rows.length === 0) {
-      return res.status(404).send({ error: 'Usuário não encontrado no banco de dados.' });
+      return res.status(404).send({ error: 'User not found in the database.' });
     }
 
     res.status(200).send({ success: true, user: rows[0] });
 
   } catch (error) {
-    console.error(`Erro ao atualizar localização para o UID ${uid}:`, error);
-    res.status(500).send({ error: 'Falha ao atualizar a localização.' });
+    console.error(`Error updating location for UID ${uid}:`, error);
+    res.status(500).send({ error: 'Failed to update location.' });
   }
 });
 
@@ -109,20 +109,20 @@ app.post('/register-device', async (req, res) => {
   const { token, uid, email, name, latitude, longitude } = req.body;
   
   if (!token) {
-    return res.status(400).send({ error: 'Token não fornecido.' });
+    return res.status(400).send({ error: 'Token not provided.' });
   }
   
   if (!uid) {
-    return res.status(400).send({ error: 'UID do usuário não fornecido.' });
+    return res.status(400).send({ error: 'User UID not provided.' });
   }
 
   try {
-    console.log(`\n=== REGISTRO DE DISPOSITIVO ===`);
+    console.log(`\n=== DEVICE REGISTRATION ===`);
     console.log(`UID: ${uid}`);
     console.log(`Token: ${token.substring(0, 20)}...`);
-    console.log(`Email: ${email || 'não fornecido'}`);
-    console.log(`Nome: ${name || 'não fornecido'}`);
-    console.log(`Localização: ${latitude}, ${longitude}`);
+    console.log(`Email: ${email || 'not provided'}`);
+    console.log(`Name: ${name || 'not provided'}`);
+    console.log(`Location: ${latitude}, ${longitude}`);
     
     // 1. Buscar ou criar o usuário
     let userQuery = 'SELECT id FROM users WHERE uid = $1';
@@ -132,7 +132,7 @@ app.post('/register-device', async (req, res) => {
     
     if (userRows.length === 0) {
       // Usuário não existe, criar novo
-      console.log(`📝 Criando novo usuário: ${uid}`);
+      console.log(`📝 Creating a new user: ${uid}`);
       
       const insertUserQuery = `
         INSERT INTO users (uid, email, name, latitude, longitude, location_updated_at)
@@ -149,11 +149,11 @@ app.post('/register-device', async (req, res) => {
       ]);
       
       userId = newUserRows[0].id;
-      console.log(`✅ Usuário criado com ID: ${userId}`);
+      console.log(`✅ User created with ID: ${userId}`);
     } else {
       // Usuário existe, atualizar informações se fornecidas
       userId = userRows[0].id;
-      console.log(`✅ Usuário encontrado com ID: ${userId}`);
+      console.log(`✅ User found with ID: ${userId}`);
       
       // Atualizar email, nome e localização se fornecidos
       if (email || name || latitude !== undefined) {
@@ -179,7 +179,7 @@ app.post('/register-device', async (req, res) => {
           userId
         ]);
         
-        console.log(`📝 Informações do usuário atualizadas`);
+        console.log('📝 User information updated');
       }
     }
     
@@ -193,7 +193,7 @@ app.post('/register-device', async (req, res) => {
     `;
     
     const { rows: deviceRows } = await db.query(deviceQuery, [token, userId]);
-    console.log(`✅ Dispositivo registrado com ID: ${deviceRows[0].id}`);
+    console.log(`✅ Device registered with ID: ${deviceRows[0].id}`);
     console.log(`=====================================\n`);
     
     res.status(200).send({ 
@@ -202,54 +202,54 @@ app.post('/register-device', async (req, res) => {
       deviceId: deviceRows[0].id
     });
   } catch (error) {
-    console.error('❌ Erro ao registrar dispositivo:', error);
-    res.status(500).send({ error: 'Falha ao registrar dispositivo: ' + error.message });
+    console.error('❌ Error registering device:', error);
+    res.status(500).send({ error: 'Failed to register device: ' + error.message });
   }
 });
 
 // Endpoint para enviar notificação de teste
 app.post('/api/test-notification', async (req, res) => {
   try {
-    console.log('=== INICIANDO TESTE DE NOTIFICAÇÃO ===');
+    console.log('=== STARTING NOTIFICATION TEST ===');
     
     const { rows } = await db.query('SELECT token FROM devices WHERE token IS NOT NULL');
     const tokens = rows.map(row => row.token);
     
-    console.log(`Total de tokens encontrados: ${tokens.length}`);
+    console.log(`Total tokens found: ${tokens.length}`);
     
     if (tokens.length === 0) {
       return res.status(404).send({ 
-        error: 'Nenhum dispositivo registrado.',
+        error: 'No registered devices.',
         tokens_count: 0
       });
     }
 
-    // Log dos primeiros caracteres de cada token
+    // Log the first characters of each token
     tokens.forEach((token, index) => {
       console.log(`Token ${index + 1}: ${token.substring(0, 30)}...`);
     });
 
     const message = {
       notification: {
-        title: '🧪 Notificação de Teste',
-        body: 'Esta é uma notificação de teste do backend!'
+        title: '🧪 Test Notification',
+        body: 'This is a test notification from the backend!'
       }
     };
 
-    console.log('Enviando notificação via Firebase...');
+    console.log('Sending notification via Firebase...');
     const response = await admin.messaging().sendEachForMulticast({
       ...message,
       tokens: tokens
     });
     
-    console.log(`✅ Sucesso: ${response.successCount} notificações enviadas`);
-    console.log(`❌ Falhas: ${response.failureCount}`);
+    console.log(`✅ Success: ${response.successCount} notifications sent`);
+    console.log(`❌ Failures: ${response.failureCount}`);
     
     // Log detalhado de falhas
     if (response.failureCount > 0) {
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
-          console.error(`Erro no token ${idx + 1}:`, resp.error?.code, resp.error?.message);
+          console.error(`Error for token ${idx + 1}:`, resp.error?.code, resp.error?.message);
         }
       });
     }
@@ -270,9 +270,9 @@ app.post('/api/test-notification', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ ERRO ao enviar notificação de teste:', error);
+    console.error('❌ ERROR sending test notification:', error);
     res.status(500).send({ 
-      error: 'Falha ao enviar notificação de teste.',
+      error: 'Failed to send test notification.',
       details: error.message
     });
   }
@@ -280,87 +280,87 @@ app.post('/api/test-notification', async (req, res) => {
 
 // --- LÓGICA DO AGENDADOR (CRON JOBS) ---
 
-// CRON 1: Verificação de alertas meteorológicos (chuva)
-// Executa a cada 15 minutos (0, 15, 30, 45) - para alertas de chuva
+// CRON 1: Weather alert check (rain)
+// Runs every 15 minutes (0, 15, 30, 45) - rain alerts
 cron.schedule('0,15,30,45 * * * *', async () => {
   console.log('\n========================================')
-  console.log('🌧️ Executando verificação de alertas de CHUVA...');
-  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('🌧️ Running RAIN alert check...');
+  console.log(`Time: ${new Date().toLocaleString('en-US')}`);
   console.log('========================================\n');
   
   try {
-    // 1. Verificar alertas meteorológicos para todas as localizações
+    // 1. Check weather alerts for all locations
     const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
     
     if (locationAlerts.length === 0) {
-      console.log('✅ Sem alertas meteorológicos no momento.');
+      console.log('✅ No weather alerts at the moment.');
       return;
     }
     
-    console.log(`\n⚠️ Alertas detectados em ${locationAlerts.length} localização(ões)!\n`);
+    console.log(`\n⚠️ Alerts detected in ${locationAlerts.length} location(s)!\n`);
     
-    // 2. Processar alertas e enviar notificações
+    // 2. Process alerts and send notifications
     const summary = await notificationService.processWeatherAlerts(db, locationAlerts);
     
     console.log('\n========================================')
-    console.log('✅ Verificação concluída!');
+    console.log('✅ Check completed!');
     console.log('========================================\n');
     
   } catch (error) {
-    console.error('\n❌ ERRO durante verificação:', error);
+    console.error('\n❌ ERROR during check:', error);
     console.error('Stack trace:', error.stack);
   }
 });
 
-// CRON 2: Verificação de alertas meteorológicos (UV, ar, vento)
-// Executa a cada hora no minuto 0 (0:00, 1:00, 2:00, etc)
+// CRON 2: Weather alert check (UV, air, wind)
+// Runs hourly at minute 0 (0:00, 1:00, 2:00, etc)
 cron.schedule('0 * * * *', async () => {
   console.log('\n========================================')
-  console.log('🌡️ Executando verificação de alertas UV/AR/VENTO...');
-  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('🌡️ Running UV/AIR/WIND alert check...');
+  console.log(`Time: ${new Date().toLocaleString('en-US')}`);
   console.log('========================================\n');
   
   try {
-    // 1. Verificar alertas meteorológicos para todas as localizações
+    // 1. Check weather alerts for all locations
     const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
     
     if (locationAlerts.length === 0) {
-      console.log('✅ Sem alertas meteorológicos no momento.');
+      console.log('✅ No weather alerts at the moment.');
       return;
     }
     
-    console.log(`\n⚠️ Alertas detectados em ${locationAlerts.length} localização(ões)!\n`);
+    console.log(`\n⚠️ Alerts detected in ${locationAlerts.length} location(s)!\n`);
     
-    // 2. Processar alertas e enviar notificações
+    // 2. Process alerts and send notifications
     const summary = await notificationService.processWeatherAlerts(db, locationAlerts);
     
     console.log('\n========================================')
-    console.log('✅ Verificação concluída!');
+    console.log('✅ Check completed!');
     console.log('========================================\n');
     
   } catch (error) {
-    console.error('\n❌ ERRO durante verificação:', error);
+    console.error('\n❌ ERROR during check:', error);
     console.error('Stack trace:', error.stack);
   }
 });
 
-// CRON 3: Limpeza de registros de cooldown expirados
-// Executa a cada hora no minuto 5 (5, 1:05, 2:05, etc)
+// CRON 3: Cleanup expired cooldown records
+// Runs hourly at minute 5 (5, 1:05, 2:05, etc)
 cron.schedule('5 * * * *', async () => {
   console.log('\n========================================')
-  console.log('🧹 Executando limpeza de cooldown expirado...');
-  console.log(`Horário: ${new Date().toLocaleString('pt-BR')}`);
+  console.log('🧹 Running expired cooldown cleanup...');
+  console.log(`Time: ${new Date().toLocaleString('en-US')}`);
   console.log('========================================\n');
   
   try {
-    // Remover registros de chuva com mais de 2 horas
+    // Remove rain records older than 2 hours
     const rainResult = await db.query(`
       DELETE FROM notification_cooldown
       WHERE alert_type IN ('rain_now', 'rain_forecast')
         AND last_notification_at < NOW() - INTERVAL '2 hours'
     `);
     
-    // Remover registros de UV/ar/vento com mais de 8 horas
+    // Remove UV/air/wind records older than 8 hours
     const otherResult = await db.query(`
       DELETE FROM notification_cooldown
       WHERE alert_type IN ('uv_high', 'air_quality', 'wind', 'wind_forecast')
@@ -370,33 +370,33 @@ cron.schedule('5 * * * *', async () => {
     const totalRemoved = rainResult.rowCount + otherResult.rowCount;
     
     if (totalRemoved > 0) {
-      console.log(`✅ ${rainResult.rowCount} registro(s) de chuva removido(s) (>2h)`);
-      console.log(`✅ ${otherResult.rowCount} registro(s) de UV/ar/vento removido(s) (>8h)`);
-      console.log(`📊 Total removido: ${totalRemoved}`);
+      console.log(`✅ ${rainResult.rowCount} rain record(s) removed (>2h)`);
+      console.log(`✅ ${otherResult.rowCount} UV/air/wind record(s) removed (>8h)`);
+      console.log(`📊 Total removed: ${totalRemoved}`);
     } else {
-      console.log('✅ Nenhum registro expirado para remover');
+      console.log('✅ No expired records to remove');
     }
     
-    // Estatísticas da tabela
+    // Table stats
     const stats = await db.query('SELECT COUNT(*) as total FROM notification_cooldown');
-    console.log(`📊 Total de registros ativos: ${stats.rows[0].total}`);
+    console.log(`📊 Total active records: ${stats.rows[0].total}`);
     
     console.log('\n========================================')
-    console.log('✅ Limpeza concluída!');
+    console.log('✅ Cleanup completed!');
     console.log('========================================\n');
     
   } catch (error) {
-    console.error('\n❌ ERRO durante limpeza:', error);
+    console.error('\n❌ ERROR during cleanup:', error);
     console.error('Stack trace:', error.stack);
   }
 });
 
-// Endpoint manual para testar limpeza de cooldown
+// Manual endpoint to test cooldown cleanup
 app.post('/api/cleanup-cooldown-now', async (req, res) => {
-  console.log('\n=== LIMPEZA MANUAL DE COOLDOWN INICIADA ===\n');
+  console.log('\n=== MANUAL COOLDOWN CLEANUP STARTED ===\n');
   
   try {
-    // Remover registros com mais de 1 hora
+    // Remove records older than 1 hour
     const result = await db.query(`
       DELETE FROM notification_cooldown
       WHERE last_notification_at < NOW() - INTERVAL '1 hour'
@@ -407,13 +407,13 @@ app.post('/api/cleanup-cooldown-now', async (req, res) => {
     
     res.status(200).send({
       success: true,
-      message: 'Limpeza concluída',
+      message: 'Cleanup completed',
       removed: result.rowCount,
       remaining: parseInt(stats.rows[0].total)
     });
     
   } catch (error) {
-    console.error('Erro na limpeza manual:', error);
+    console.error('Error during manual cleanup:', error);
     res.status(500).send({
       success: false,
       error: error.message
@@ -421,9 +421,9 @@ app.post('/api/cleanup-cooldown-now', async (req, res) => {
   }
 });
 
-// Endpoint manual para testar verificação de alertas
+// Manual endpoint to test alert check
 app.post('/api/check-alerts-now', async (req, res) => {
-  console.log('\n=== VERIFICAÇÃO MANUAL DE ALERTAS INICIADA ===\n');
+  console.log('\n=== MANUAL ALERT CHECK STARTED ===\n');
   
   try {
     const locationAlerts = await weatherService.checkAlertsForAllLocations(db);
@@ -431,7 +431,7 @@ app.post('/api/check-alerts-now', async (req, res) => {
     if (locationAlerts.length === 0) {
       return res.status(200).send({
         success: true,
-        message: 'Sem alertas meteorológicos no momento',
+        message: 'No weather alerts at the moment',
         alerts: []
       });
     }
@@ -440,12 +440,12 @@ app.post('/api/check-alerts-now', async (req, res) => {
     
     res.status(200).send({
       success: true,
-      message: 'Verificação concluída',
+      message: 'Check completed',
       summary: summary
     });
     
   } catch (error) {
-    console.error('Erro na verificação manual:', error);
+    console.error('Error during manual check:', error);
     res.status(500).send({
       success: false,
       error: error.message
@@ -459,18 +459,18 @@ app.get('/api/weather-status', (req, res) => {
     res.status(200).send({
       success: true,
       api: 'Open-Meteo',
-      description: 'API gratuita sem limites rígidos de taxa',
+      description: 'Free API with no strict rate limits',
       features: [
-        'Chuva atual e prevista',
-        'Índice UV',
-        'Qualidade do ar',
-        'Velocidade e rajadas de vento'
+        'Current and forecast rain',
+        'UV index',
+        'Air quality',
+        'Wind speed and gusts'
       ],
-      message: 'Sistema operacional'
+      message: 'System operational'
     });
     
   } catch (error) {
-    console.error('Erro ao obter status:', error);
+    console.error('Error getting status:', error);
     res.status(500).send({
       success: false,
       error: error.message
@@ -483,7 +483,7 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
     
-    console.log(`\n=== DIAGNÓSTICO DO USUÁRIO ${uid} ===\n`);
+    console.log(`\n=== USER DIAGNOSIS ${uid} ===\n`);
     
     // 1. Verificar usuário
     const userQuery = 'SELECT * FROM users WHERE uid = $1';
@@ -492,7 +492,7 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
     if (users.length === 0) {
       return res.status(404).send({
         success: false,
-        error: 'Usuário não encontrado no banco de dados',
+        error: 'User not found in the database',
         uid: uid
       });
     }
@@ -529,15 +529,15 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
     const warnings = [];
     
     if (!user.latitude || !user.longitude) {
-      problems.push('Localização do usuário não está definida');
+      problems.push("User location isn't set");
     }
     
     if (devices.length === 0) {
-      problems.push('Nenhum dispositivo registrado');
+      problems.push('No registered devices');
     } else {
       devices.forEach((device, index) => {
         if (!device.token) {
-          problems.push(`Dispositivo ${index + 1} não tem token FCM`);
+          problems.push(`Device ${index + 1} has no FCM token`);
         }
       });
     }
@@ -548,7 +548,7 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
     });
     
     if (activeCooldowns.length > 0) {
-      warnings.push(`${activeCooldowns.length} cooldown(s) ativo(s) - usuário não receberá notificações para essas localizações por até 1 hora`);
+      warnings.push(`${activeCooldowns.length} active cooldown(s) - the user won't receive notifications for those locations for up to 1 hour`);
     }
     
     // 6. Preparar resposta
@@ -596,7 +596,7 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Erro ao diagnosticar usuário:', error);
+    console.error('Error diagnosing user:', error);
     res.status(500).send({
       success: false,
       error: error.message
@@ -608,12 +608,12 @@ app.get('/api/diagnose-user/:uid', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, async () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   try {
     const result = await db.query('SELECT NOW()');
-    console.log('✅ Conexão com o banco de dados PostgreSQL bem-sucedida!');
-    console.log('Horário atual retornado pelo banco:', result.rows[0].now);
+    console.log('✅ PostgreSQL database connection successful!');
+    console.log('Current time returned by DB:', result.rows[0].now);
   } catch (err) {
-    console.error('❌ ERRO AO CONECTAR COM O BANCO DE DADOS NA INICIALIZAÇÃO:', err.stack);
+    console.error('❌ ERROR CONNECTING TO DATABASE ON STARTUP:', err.stack);
   }
 });

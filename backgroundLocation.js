@@ -9,7 +9,7 @@ const updateBackgroundLocation = async (req, res) => {
   if (!latitude || !longitude || !deviceId) {
     return res.status(400).json({ 
       success: false, 
-      error: 'Campos obrigatórios: latitude, longitude e deviceId' 
+      error: 'Required fields: latitude, longitude, and deviceId' 
     });
   }
 
@@ -47,7 +47,7 @@ const updateBackgroundLocation = async (req, res) => {
       await db.query('ROLLBACK');
       return res.status(404).json({ 
         success: false, 
-        error: 'Usuário não encontrado' 
+        error: 'User not found' 
       });
     }
     
@@ -61,10 +61,10 @@ const updateBackgroundLocation = async (req, res) => {
     
   } catch (error) {
     await db.query('ROLLBACK');
-    console.error('Erro ao atualizar localização em background:', error);
+    console.error('Error updating background location:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Erro ao processar atualização de localização',
+      error: 'Failed to process location update',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

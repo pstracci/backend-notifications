@@ -7,7 +7,7 @@ const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).send({ error: 'Não autorizado. Nenhum token fornecido.' });
+    return res.status(401).send({ error: 'Unauthorized. No token provided.' });
   }
 
   const idToken = authHeader.split('Bearer ')[1];
@@ -24,8 +24,8 @@ const authMiddleware = async (req, res, next) => {
     // Passa para o próximo passo (o nosso endpoint)
     next();
   } catch (error) {
-    console.error('Erro ao verificar o token de autenticação:', error);
-    return res.status(403).send({ error: 'Token inválido ou expirado.' });
+    console.error('Error verifying authentication token:', error);
+    return res.status(403).send({ error: 'Invalid or expired token.' });
   }
 };
 

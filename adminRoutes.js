@@ -43,11 +43,11 @@ router.get('/api/admin/users', async (req, res) => {
       ORDER BY u.created_at DESC
     `);
     
-    console.log(`📋 Listando ${users.length} usuário(s)`);
+    console.log(`📋 Listing ${users.length} user(s)`);
     res.json(users);
   } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    res.status(500).json({ error: 'Erro ao buscar usuários' });
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
@@ -63,7 +63,7 @@ router.get('/api/admin/users/:userId', async (req, res) => {
     );
     
     if (users.length === 0) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // Buscar dispositivos do usuário
@@ -88,8 +88,8 @@ router.get('/api/admin/users/:userId', async (req, res) => {
       notifications: notifications
     });
   } catch (error) {
-    console.error('Erro ao buscar detalhes do usuário:', error);
-    res.status(500).json({ error: 'Erro ao buscar detalhes do usuário' });
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ error: 'Failed to fetch user details' });
   }
 });
 
@@ -98,15 +98,15 @@ router.post('/api/admin/send-notification', async (req, res) => {
   const { userId, title, message, intensity = 'moderate', precipitation = 5.0 } = req.body;
 
   if (!userId || !title || !message) {
-    return res.status(400).json({ error: 'userId, title e message são obrigatórios' });
+    return res.status(400).json({ error: 'userId, title, and message are required' });
   }
 
   try {
-    console.log('\n=== ENVIANDO NOTIFICAÇÃO DE TESTE ===');
-    console.log(`Usuário ID: ${userId}`);
-    console.log(`Intensidade: ${intensity}`);
-    console.log(`Título: ${title}`);
-    console.log(`Mensagem: ${message}`);
+    console.log('\n=== SENDING TEST NOTIFICATION ===');
+    console.log(`User ID: ${userId}`);
+    console.log(`Intensity: ${intensity}`);
+    console.log(`Title: ${title}`);
+    console.log(`Message: ${message}`);
 
     // Busca os tokens de dispositivos do usuário específico
     const { rows: userDevices } = await db.query(
@@ -118,11 +118,11 @@ router.post('/api/admin/send-notification', async (req, res) => {
     );
 
     if (userDevices.length === 0) {
-      return res.status(404).json({ error: 'Nenhum dispositivo encontrado para este usuário' });
+      return res.status(404).json({ error: 'No devices found for this user' });
     }
 
     const tokens = userDevices.map(device => device.token);
-    console.log(`📱 Enviando para ${tokens.length} dispositivo(s) do usuário ${userId}`);
+    console.log(`📱 Sending to ${tokens.length} device(s) for user ${userId}`);
 
     // Obtém configuração de intensidade
     const config = notificationConfigs[intensity] || notificationConfigs.moderate;
@@ -165,13 +165,13 @@ router.post('/api/admin/send-notification', async (req, res) => {
     const sendPromises = messages.map(async (message, index) => {
       try {
         const response = await admin.messaging().send(message);
-        console.log(`✅ Mensagem ${index + 1}/${messages.length} enviada com sucesso`);
+        console.log(`✅ Message ${index + 1}/${messages.length} sent successfully`);
         return { success: true, messageId: response };
       } catch (error) {
-        console.error(`❌ Erro ao enviar mensagem ${index + 1}:`, error.message);
+        console.error(`❌ Error sending message ${index + 1}:`, error.message);
         return {
           success: false,
-          error: error.message || 'Erro desconhecido',
+          error: error.message || 'Unknown error',
           code: error.code
         };
       }
@@ -181,7 +181,7 @@ router.post('/api/admin/send-notification', async (req, res) => {
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.length - successCount;
     
-    console.log(`\n📊 Resultado: ${successCount} sucesso, ${failureCount} falhas`);
+    console.log(`\n📊 Result: ${successCount} success, ${failureCount} failures`);
     console.log('=====================================\n');
     
     res.json({
@@ -193,8 +193,8 @@ router.post('/api/admin/send-notification', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro ao enviar notificação:', error);
-    res.status(500).json({ error: 'Erro ao enviar notificação' });
+    console.error('❌ Error sending notification:', error);
+    res.status(500).json({ error: 'Failed to send notification' });
   }
 });
 

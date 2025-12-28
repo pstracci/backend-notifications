@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌦️ Painel Admin - Notificações Meteorológicas</title>
+    <title>🌦️ Admin Panel - Weather Notifications</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -84,78 +84,78 @@
 <body>
     <div class="container">
         <div class="text-center mb-5">
-            <h1 class="display-4 text-white fw-bold mb-2">🌦️ Painel Admin</h1>
-            <p class="text-white-50 fs-5">Sistema de Notificações Meteorológicas</p>
+            <h1 class="display-4 text-white fw-bold mb-2">🌦️ Admin Panel</h1>
+            <p class="text-white-50 fs-5">Weather Notification System</p>
         </div>
         
-        <!-- Estatísticas -->
+        <!-- Statistics -->
         <div class="row mb-4">
             <div class="col-md-4 mb-3">
                 <div class="stats-card text-center">
                     <div class="fs-1 mb-2">👥</div>
                     <h3 id="totalUsers" class="mb-1">-</h3>
-                    <p class="text-muted mb-0">Usuários Cadastrados</p>
+                    <p class="text-muted mb-0">Registered Users</p>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="stats-card text-center">
                     <div class="fs-1 mb-2">📱</div>
                     <h3 id="totalDevices" class="mb-1">-</h3>
-                    <p class="text-muted mb-0">Dispositivos Ativos</p>
+                    <p class="text-muted mb-0">Active Devices</p>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="stats-card text-center">
                     <div class="fs-1 mb-2">🔔</div>
                     <h3 id="totalNotifications" class="mb-1">0</h3>
-                    <p class="text-muted mb-0">Notificações Enviadas</p>
+                    <p class="text-muted mb-0">Notifications Sent</p>
                 </div>
             </div>
         </div>
         
         <div class="main-card mb-4">
             <div class="card-header-custom">
-                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Lista de Usuários</h5>
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> User List</h5>
             </div>
             <div class="card-body">
-                <!-- Filtros de Pesquisa -->
+                <!-- Search Filters -->
                 <div class="row g-2 mb-3">
                     <div class="col-md-3">
-                        <input type="text" class="form-control" id="filterEmail" placeholder="🔍 Buscar por email...">
+                        <input type="text" class="form-control" id="filterEmail" placeholder="🔍 Search by email...">
                     </div>
                     <div class="col-md-3">
-                        <input type="text" class="form-control" id="filterName" placeholder="🔍 Buscar por nome...">
+                        <input type="text" class="form-control" id="filterName" placeholder="🔍 Search by name...">
                     </div>
                     <div class="col-md-3">
-                        <input type="text" class="form-control" id="filterCity" placeholder="🔍 Buscar por cidade...">
+                        <input type="text" class="form-control" id="filterCity" placeholder="🔍 Search by city...">
                     </div>
                     <div class="col-md-3">
                         <select class="form-select" id="filterDevice">
-                            <option value="">📱 Todos os usuários</option>
-                            <option value="with">Com dispositivo</option>
-                            <option value="without">Sem dispositivo</option>
+                            <option value="">📱 All users</option>
+                            <option value="with">With device</option>
+                            <option value="without">Without device</option>
                         </select>
                     </div>
                 </div>
                 
                 <div id="loadingUsers" class="text-center py-3">
                     <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Carregando...</span>
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-2 mb-0">Carregando usuários...</p>
+                    <p class="mt-2 mb-0">Loading users...</p>
                 </div>
                 <div id="usersList" class="list-group">
-                    <!-- Usuários serão inseridos aqui via JavaScript -->
+                    <!-- Users will be inserted here via JavaScript -->
                 </div>
                 
-                <!-- Paginação -->
+                <!-- Pagination -->
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <div>
-                        <small class="text-muted">Mostrando <span id="showingCount">0</span> de <span id="totalCount">0</span> usuários</small>
+                        <small class="text-muted">Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> users</small>
                     </div>
                     <nav>
                         <ul class="pagination pagination-sm mb-0" id="pagination">
-                            <!-- Paginação será inserida aqui -->
+                            <!-- Pagination will be inserted here -->
                         </ul>
                     </nav>
                 </div>
@@ -164,81 +164,81 @@
 
         <div id="notificationForm" class="main-card">
             <div class="card-header-custom">
-                <h5 class="mb-0"><i class="bi bi-send-fill"></i> Enviar Notificação de Teste</h5>
+                <h5 class="mb-0"><i class="bi bi-send-fill"></i> Send Test Notification</h5>
             </div>
             <div class="card-body p-4">
                 <div class="alert alert-info mb-4">
-                    <strong>👤 Usuário selecionado:</strong> 
-                    <span id="selectedUserName" class="fw-bold">Nenhum usuário selecionado</span>
+                    <strong>👤 Selected user:</strong> 
+                    <span id="selectedUserName" class="fw-bold">No user selected</span>
                 </div>
                 
                 <form id="sendNotificationForm">
                     <input type="hidden" id="userId" name="userId">
                     
-                    <!-- Seleção de Tipo de Alerta -->
+                    <!-- Alert Type Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">📊 Tipo de Alerta</label>
+                        <label class="form-label fw-bold">📊 Alert Type</label>
                         <div class="btn-group w-100" role="group">
                             <input type="radio" class="btn-check" name="alertType" id="alertRain" value="rain" checked>
-                            <label class="btn btn-outline-primary" for="alertRain">🌧️ Chuva</label>
+                            <label class="btn btn-outline-primary" for="alertRain">🌧️ Rain</label>
                             
                             <input type="radio" class="btn-check" name="alertType" id="alertUV" value="uv">
                             <label class="btn btn-outline-warning" for="alertUV">☀️ UV</label>
                             
                             <input type="radio" class="btn-check" name="alertType" id="alertAir" value="air_quality">
-                            <label class="btn btn-outline-info" for="alertAir">😷 Ar</label>
+                            <label class="btn btn-outline-info" for="alertAir">😷 Air</label>
                             
                             <input type="radio" class="btn-check" name="alertType" id="alertWind" value="wind">
-                            <label class="btn btn-outline-secondary" for="alertWind">💨 Vento</label>
+                            <label class="btn btn-outline-secondary" for="alertWind">💨 Wind</label>
                         </div>
                     </div>
                     
-                    <!-- Seleção de Intensidade (dinâmica) -->
+                    <!-- Intensity Selection (dynamic) -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold" id="intensityLabel">🌧️ Intensidade da Chuva</label>
+                        <label class="form-label fw-bold" id="intensityLabel">🌧️ Rain Intensity</label>
                         <div class="row g-2" id="intensityButtons">
-                            <!-- Botões serão inseridos dinamicamente -->
+                            <!-- Buttons will be inserted dynamically -->
                         </div>
                         <input type="hidden" id="intensity" name="intensity" value="moderate">
                     </div>
 
-                    <!-- Preview da Notificação -->
+                    <!-- Notification Preview -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">📱 Preview da Notificação</label>
+                        <label class="form-label fw-bold">📱 Notification Preview</label>
                         <div class="preview-card">
                             <div class="d-flex align-items-start">
                                 <div class="me-3 fs-2" id="previewIcon">🌧️</div>
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold" id="previewTitle">Chuva Moderada se Aproximando</h6>
-                                    <p class="mb-0 small" id="previewBody">Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!</p>
+                                    <h6 class="mb-1 fw-bold" id="previewTitle">Moderate Rain Approaching</h6>
+                                    <p class="mb-0 small" id="previewBody">Moderate rain expected in the next 30 minutes (5.0 mm/h). Be prepared!</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Opções Avançadas (Opcional) -->
+                    <!-- Advanced Options (Optional) -->
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="customMessage">
                             <label class="form-check-label" for="customMessage">
-                                ✏️ Personalizar mensagem
+                                ✏️ Customize message
                             </label>
                         </div>
                     </div>
 
                     <div id="customMessageFields" style="display: none;">
                         <div class="mb-3">
-                            <label for="title" class="form-label">Título Personalizado</label>
-                            <input type="text" class="form-control" id="title" placeholder="Ex: Alerta de Chuva">
+                            <label for="title" class="form-label">Custom Title</label>
+                            <input type="text" class="form-control" id="title" placeholder="e.g., Rain Alert">
                         </div>
                         <div class="mb-3">
-                            <label for="message" class="form-label">Mensagem Personalizada</label>
-                            <textarea class="form-control" id="message" rows="3" placeholder="Ex: Chuva forte prevista para sua região..."></textarea>
+                            <label for="message" class="form-label">Custom Message</label>
+                            <textarea class="form-control" id="message" rows="3" placeholder="e.g., Heavy rain expected in your area..."></textarea>
                         </div>
                     </div>
                     
                     <button type="submit" class="btn btn-lg btn-success w-100">
-                        <span id="submitBtnText">🚀 Enviar Notificação de Teste</span>
+                        <span id="submitBtnText">🚀 Send Test Notification</span>
                         <span id="submitSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
                     </button>
                 </form>
@@ -246,7 +246,7 @@
         </div>
 
         <div id="alertContainer" class="mt-4">
-            <!-- Alertas serão mostrados aqui -->
+            <!-- Alerts will be shown here -->
         </div>
     </div>
 
@@ -276,18 +276,18 @@
             let notificationsSent = 0;
             let currentPage = 1;
             const usersPerPage = 20;
-            const locationCache = {}; // Cache para evitar múltiplas requisições
-            const userLocations = {}; // Armazena localizações dos usuários
+            const locationCache = {}; // Cache to avoid multiple requests
+            const userLocations = {}; // Stores user locations
             
-            // Buscar nome da localização usando API de geocoding reverso
+            // Fetch location name using reverse geocoding API
             let geocodingQueue = Promise.resolve();
             let requestCount = 0;
             
             async function getLocationName(lat, lon, userId) {
-                const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`; // Menos preciso = mais cache
+                const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`; // Less precision = more cache hits
                 const locationElement = document.getElementById(`location-${userId}`);
                 
-                // Verifica cache
+                // Check cache
                 if (locationCache[cacheKey]) {
                     if (locationElement) {
                         locationElement.textContent = locationCache[cacheKey];
@@ -296,10 +296,10 @@
                     return;
                 }
                 
-                // Adiciona à fila para evitar rate limit
+                // Queue requests to avoid rate limits
                 geocodingQueue = geocodingQueue.then(async () => {
                     try {
-                        // Delay de 1.5 segundos entre requisições
+                        // 1.5s delay between requests
                         requestCount++;
                         if (requestCount > 1) {
                             await new Promise(resolve => setTimeout(resolve, 1500));
@@ -321,58 +321,58 @@
                     const data = await response.json();
                     
                     if (locationElement && data.address) {
-                        // Monta endereço mais específico
+                        // Build a more specific address
                         const parts = [];
                         
-                        // Rua/Avenida
+                        // Street
                         if (data.address.road) {
                             parts.push(data.address.road);
                         }
                         
-                        // Bairro
+                        // Neighborhood
                         if (data.address.suburb || data.address.neighbourhood) {
                             parts.push(data.address.suburb || data.address.neighbourhood);
                         }
                         
-                        // Cidade
+                        // City
                         const city = data.address.city || data.address.town || data.address.village || data.address.municipality;
                         if (city) {
                             parts.push(city);
                         }
                         
-                        // Estado
+                        // State
                         if (data.address.state) {
                             parts.push(data.address.state);
                         }
                         
-                        const locationText = parts.join(', ') || 'Localização desconhecida';
+                        const locationText = parts.join(', ') || 'Unknown location';
                         if (locationElement) {
                             locationElement.textContent = locationText;
                         }
                         locationCache[cacheKey] = locationText;
-                        userLocations[userId] = locationText; // Armazena para filtro
+                        userLocations[userId] = locationText; // Stored for filtering
                     }
                     } catch (error) {
-                        console.warn(`Erro ao buscar localização para usuário ${userId}:`, error.message);
+                        console.warn(`Failed to fetch location for user ${userId}:`, error.message);
                         if (locationElement) {
-                            locationElement.textContent = '📍 Localização não disponível';
+                            locationElement.textContent = '📍 Location not available';
                         }
-                        locationCache[cacheKey] = '📍 Localização não disponível';
+                        locationCache[cacheKey] = '📍 Location not available';
                         userLocations[userId] = '';
                     }
                 }).catch(err => {
-                    console.error('Erro na fila de geocoding:', err);
+                    console.error('Error in geocoding queue:', err);
                 });
             }
             
-            // Filtra usuários baseado nos critérios
+            // Filter users based on criteria
             function filterUsers() {
                 const emailFilter = document.getElementById('filterEmail').value.toLowerCase();
                 const nameFilter = document.getElementById('filterName').value.toLowerCase();
                 const cityFilter = document.getElementById('filterCity').value.toLowerCase();
                 const deviceFilter = document.getElementById('filterDevice').value;
                 
-                console.log('Filtrando usuários...', { emailFilter, nameFilter, cityFilter, deviceFilter });
+                console.log('Filtering users...', { emailFilter, nameFilter, cityFilter, deviceFilter });
                 
                 filteredUsers = users.filter(user => {
                     // Filtro por email
@@ -410,20 +410,20 @@
                     return true;
                 });
                 
-                console.log(`Filtrados: ${filteredUsers.length} de ${users.length} usuários`);
+                console.log(`Filtered: ${filteredUsers.length} of ${users.length} users`);
                 
                 currentPage = 1;
                 renderUsers(filteredUsers);
                 renderPagination();
             }
             
-            // Renderiza paginação
+            // Render pagination
             function renderPagination() {
                 const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
                 const paginationElement = document.getElementById('pagination');
                 paginationElement.innerHTML = '';
                 
-                // Atualiza contador
+                // Update counter
                 const start = (currentPage - 1) * usersPerPage + 1;
                 const end = Math.min(currentPage * usersPerPage, filteredUsers.length);
                 document.getElementById('showingCount').textContent = filteredUsers.length > 0 ? `${start}-${end}` : '0';
@@ -431,7 +431,7 @@
                 
                 if (totalPages <= 1) return;
                 
-                // Botão anterior
+                // Previous button
                 const prevLi = document.createElement('li');
                 prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
                 prevLi.innerHTML = `<a class="page-link" href="#">«</a>`;
@@ -445,7 +445,7 @@
                 });
                 paginationElement.appendChild(prevLi);
                 
-                // Páginas
+                // Pages
                 const maxPages = 5;
                 let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
                 let endPage = Math.min(totalPages, startPage + maxPages - 1);
@@ -467,7 +467,7 @@
                     paginationElement.appendChild(li);
                 }
                 
-                // Botão próximo
+                // Next button
                 const nextLi = document.createElement('li');
                 nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
                 nextLi.innerHTML = `<a class="page-link" href="#">»</a>`;
@@ -482,153 +482,153 @@
                 paginationElement.appendChild(nextLi);
             }
 
-            // Configurações de notificação por tipo e intensidade
+            // Notification configs by type and intensity
             const notificationConfigs = {
                 rain: {
                     light: {
                         icon: '🌦️',
-                        title: 'Chuva Fraca se Aproximando',
-                        body: 'Chuva leve prevista nos próximos 30 minutos (1.5 mm/h). Leve um guarda-chuva!',
+                        title: 'Light Rain Approaching',
+                        body: 'Light rain expected in the next 30 minutes (1.5 mm/h). Bring an umbrella!',
                         value: 1.5
                     },
                     moderate: {
                         icon: '🌧️',
-                        title: 'Chuva Moderada se Aproximando',
-                        body: 'Chuva moderada prevista nos próximos 30 minutos (5.0 mm/h). Prepare-se!',
+                        title: 'Moderate Rain Approaching',
+                        body: 'Moderate rain expected in the next 30 minutes (5.0 mm/h). Be prepared!',
                         value: 5.0
                     },
                     heavy: {
                         icon: '⛈️',
-                        title: 'CHUVA FORTE se Aproximando!',
-                        body: 'ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (25.0 mm/h). Busque abrigo!',
+                        title: 'HEAVY RAIN Approaching!',
+                        body: 'WARNING: Heavy rain expected in the next 30 minutes (25.0 mm/h). Seek shelter!',
                         value: 25.0
                     },
                     extreme: {
                         icon: '🚨',
-                        title: 'ALERTA: CHUVA EXTREMA!',
-                        body: 'ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (75.0 mm/h). BUSQUE ABRIGO IMEDIATAMENTE!',
+                        title: 'ALERT: EXTREME RAIN!',
+                        body: 'MAXIMUM ALERT: Extreme rain expected in the next 30 minutes (75.0 mm/h). SEEK SHELTER IMMEDIATELY!',
                         value: 75.0
                     }
                 },
                 uv: {
                     high: {
                         icon: '☀️',
-                        title: 'Índice UV Alto',
-                        body: 'Índice UV alto (8.5). Use protetor solar e evite exposição prolongada ao sol.',
+                        title: 'High UV Index',
+                        body: 'High UV index (8.5). Use sunscreen and avoid prolonged sun exposure.',
                         value: 8.5
                     },
                     very_high: {
                         icon: '☀️',
-                        title: 'Índice UV Muito Alto',
-                        body: 'Índice UV muito alto (10.2). Use protetor solar FPS 50+ e evite sol entre 10h-16h.',
+                        title: 'Very High UV Index',
+                        body: 'Very high UV index (10.2). Use SPF 50+ sunscreen and avoid sun between 10am–4pm.',
                         value: 10.2
                     },
                     extreme: {
                         icon: '🔥',
-                        title: 'ALERTA: Índice UV EXTREMO',
-                        body: 'ATENÇÃO: Índice UV extremo (12.5). Evite exposição ao sol! Risco de queimaduras graves.',
+                        title: 'ALERT: EXTREME UV Index',
+                        body: 'WARNING: Extreme UV index (12.5). Avoid sun exposure! Risk of severe sunburn.',
                         value: 12.5
                     }
                 },
                 air_quality: {
                     moderate: {
                         icon: '😷',
-                        title: 'Qualidade do Ar Moderada',
-                        body: 'Qualidade do ar moderada (AQI: 55). Pessoas sensíveis devem reduzir atividades ao ar livre.',
+                        title: 'Moderate Air Quality',
+                        body: 'Moderate air quality (AQI: 55). Sensitive individuals should reduce outdoor activities.',
                         value: 55
                     },
                     poor: {
                         icon: '⚠️',
-                        title: 'Qualidade do Ar Ruim',
-                        body: 'Qualidade do ar ruim (AQI: 75). Evite atividades prolongadas ao ar livre.',
+                        title: 'Poor Air Quality',
+                        body: 'Poor air quality (AQI: 75). Avoid prolonged outdoor activities.',
                         value: 75
                     },
                     very_poor: {
                         icon: '🚨',
-                        title: 'Qualidade do Ar Muito Ruim',
-                        body: 'ALERTA: Qualidade do ar muito ruim (AQI: 95). Evite sair de casa!',
+                        title: 'Very Poor Air Quality',
+                        body: 'ALERT: Very poor air quality (AQI: 95). Avoid going outside!',
                         value: 95
                     }
                 },
                 wind: {
                     strong: {
                         icon: '💨',
-                        title: 'Vento Forte',
-                        body: 'Vento forte detectado (60 km/h). Tenha cuidado ao ar livre.',
+                        title: 'Strong Wind',
+                        body: 'Strong wind detected (60 km/h). Use caution outdoors.',
                         value: 60
                     },
                     very_strong: {
                         icon: '🌪️',
-                        title: 'Vento Muito Forte',
-                        body: 'ALERTA: Vento muito forte (85 km/h). Evite áreas abertas!',
+                        title: 'Very Strong Wind',
+                        body: 'ALERT: Very strong wind (85 km/h). Avoid open areas!',
                         value: 85
                     }
                 }
             };
 
-            // Carrega estatísticas
+            // Load stats
             async function loadStats() {
                 try {
                     const [usersResponse, devicesResponse] = await Promise.all([
                         fetch('/api/admin/users'),
-                        fetch('/api/admin/users') // Temporário - criar endpoint específico depois
+                        fetch('/api/admin/users') // Temporary - create a dedicated endpoint later
                     ]);
 
                     const users = await usersResponse.json();
                     document.getElementById('totalUsers').textContent = users.length;
                     
-                    // Simular contagem de dispositivos (criar endpoint depois)
+                    // Mock device count (create endpoint later)
                     document.getElementById('totalDevices').textContent = users.length;
                 } catch (error) {
-                    console.error('Erro ao carregar estatísticas:', error);
+                    console.error('Failed to load stats:', error);
                 }
             }
 
-            // Carrega a lista de usuários
+            // Load user list
             async function loadUsers() {
                 try {
-                    console.log('Carregando usuários...');
+                    console.log('Loading users...');
                     const response = await fetch('/api/admin/users');
                     console.log('Response status:', response.status);
                     
                     if (!response.ok) {
                         const errorText = await response.text();
-                        console.error('Erro na resposta:', errorText);
-                        throw new Error('Erro ao carregar usuários');
+                        console.error('Error in response:', errorText);
+                        throw new Error('Failed to load users');
                     }
                     
                     users = await response.json();
                     filteredUsers = users;
-                    console.log('Usuários carregados:', users.length);
-                    console.log('Primeiro usuário:', users[0]);
+                    console.log('Users loaded:', users.length);
+                    console.log('First user:', users[0]);
                     
                     renderUsers(filteredUsers);
                     renderPagination();
                     loadingUsers.style.display = 'none';
                     loadStats();
                 } catch (error) {
-                    console.error('Erro detalhado:', error);
-                    showAlert('Erro ao carregar usuários: ' + error.message, 'danger');
+                    console.error('Detailed error:', error);
+                    showAlert('Failed to load users: ' + error.message, 'danger');
                     loadingUsers.innerHTML = `
                         <div class="alert alert-danger">
-                            Erro ao carregar usuários. <button onclick="window.location.reload()" class="btn btn-sm btn-outline-danger">Tentar novamente</button>
-                            <div class="small mt-2">Erro: ${error.message}</div>
+                            Failed to load users. <button onclick="window.location.reload()" class="btn btn-sm btn-outline-danger">Try again</button>
+                            <div class="small mt-2">Error: ${error.message}</div>
                         </div>
                     `;
                 }
             }
 
-            // Renderiza a lista de usuários
+            // Render user list
             function renderUsers(usersToRender) {
                 try {
                     usersList.innerHTML = '';
                     
                     if (usersToRender.length === 0) {
-                        usersList.innerHTML = '<div class="text-muted text-center py-3">Nenhum usuário encontrado</div>';
+                        usersList.innerHTML = '<div class="text-muted text-center py-3">No users found</div>';
                         return;
                     }
 
-                    // Paginação
+                    // Pagination
                     const start = (currentPage - 1) * usersPerPage;
                     const end = start + usersPerPage;
                     const paginatedUsers = usersToRender.slice(start, end);
@@ -654,21 +654,21 @@
                         locationInfo = `
                             <div class="mt-1">
                                 <small class="text-muted">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</small>
-                                <small class="text-muted ms-2" id="location-${user.id}">🔍 Carregando...</small>
+                                <small class="text-muted ms-2" id="location-${user.id}">🔍 Loading...</small>
                             </div>
                         `;
                     }
                     
                     const deviceCount = user.device_count || 0;
-                    const userUid = user.uid || 'sem-uid';
-                    const userEmail = user.email || 'Usuário sem e-mail';
+                    const userUid = user.uid || 'no-uid';
+                    const userEmail = user.email || 'User without email';
                     
                     userElement.innerHTML = `
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">${userEmail}</h6>
                                 <small class="text-muted">ID: ${userUid.substring(0, 12)}...</small>
-                                <small class="text-muted ms-2">📱 ${deviceCount} dispositivo(s)</small>
+                                <small class="text-muted ms-2">📱 ${deviceCount} device(s)</small>
                                 ${locationInfo}
                             </div>
                             <div class="text-end">
@@ -680,21 +680,21 @@
                     userElement.addEventListener('click', () => selectUser(user));
                     usersList.appendChild(userElement);
                     
-                    // Buscar nome da localização
+                    // Fetch location name
                     if (user.latitude && user.longitude) {
                         getLocationName(parseFloat(user.latitude), parseFloat(user.longitude), user.id);
                     }
                         } catch (userError) {
-                            console.error(`Erro ao renderizar usuário ${index}:`, userError, user);
+                            console.error(`Failed to render user ${index}:`, userError, user);
                         }
                     });
                 } catch (error) {
-                    console.error('Erro ao renderizar usuários:', error);
-                    usersList.innerHTML = '<div class="alert alert-danger">Erro ao exibir usuários</div>';
+                    console.error('Failed to render users:', error);
+                    usersList.innerHTML = '<div class="alert alert-danger">Failed to display users</div>';
                 }
             }
 
-            // Seleciona um usuário
+            // Select a user
             function selectUser(user) {
                 document.querySelectorAll('.user-card').forEach(el => {
                     el.classList.remove('selected');
@@ -708,27 +708,27 @@
                     selectedCard.classList.add('selected');
                 }
                 
-                selectedUserName.textContent = user.email || `Usuário ${user.uid.substring(0, 8)}...`;
+                selectedUserName.textContent = user.email || `User ${user.uid.substring(0, 8)}...`;
                 userIdInput.value = user.id;
                 notificationForm.style.display = 'block';
                 
                 notificationForm.scrollIntoView({ behavior: 'smooth' });
             }
 
-            // Renderiza botões de intensidade baseado no tipo de alerta
+            // Render intensity buttons based on alert type
             function renderIntensityButtons(alertType) {
                 const intensityButtonsContainer = document.getElementById('intensityButtons');
                 const intensityLabel = document.getElementById('intensityLabel');
                 intensityButtonsContainer.innerHTML = '';
                 
                 const labels = {
-                    rain: '🌧️ Intensidade da Chuva',
-                    uv: '☀️ Nível de UV',
-                    air_quality: '😷 Qualidade do Ar',
-                    wind: '💨 Intensidade do Vento'
+                    rain: '🌧️ Rain Intensity',
+                    uv: '☀️ UV Level',
+                    air_quality: '😷 Air Quality',
+                    wind: '💨 Wind Intensity'
                 };
                 
-                intensityLabel.textContent = labels[alertType] || 'Intensidade';
+                intensityLabel.textContent = labels[alertType] || 'Intensity';
                 
                 const configs = notificationConfigs[alertType];
                 const intensities = Object.keys(configs);
@@ -756,11 +756,11 @@
                     intensityButtonsContainer.appendChild(col);
                 });
                 
-                // Seleciona primeira intensidade por padrão
+                // Select first intensity by default
                 selectedIntensity = intensities[0];
                 document.getElementById('intensity').value = selectedIntensity;
                 
-                // Adiciona event listeners aos novos botões
+                // Add event listeners to new buttons
                 document.querySelectorAll('.intensity-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
@@ -774,7 +774,7 @@
                 updatePreview();
             }
 
-            // Atualiza preview da notificação
+            // Update notification preview
             function updatePreview() {
                 const config = notificationConfigs[selectedAlertType][selectedIntensity];
                 if (!config) return;
@@ -792,7 +792,7 @@
                 }
             }
 
-            // Gerencia mudança de tipo de alerta
+            // Handle alert type change
             document.querySelectorAll('input[name="alertType"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     selectedAlertType = this.value;
@@ -800,21 +800,21 @@
                 });
             });
 
-            // Toggle de mensagem personalizada
+            // Custom message toggle
             customMessageCheckbox.addEventListener('change', function() {
                 customMessageFields.style.display = this.checked ? 'block' : 'none';
                 updatePreview();
             });
 
-            // Atualiza preview quando digitar
+            // Update preview while typing
             document.getElementById('title')?.addEventListener('input', updatePreview);
             document.getElementById('message')?.addEventListener('input', updatePreview);
 
-            // Envia a notificação
+            // Send the notification
             async function sendNotification(userId, alertType, intensity, customTitle, customMessage) {
                 try {
                     submitBtn.disabled = true;
-                    submitBtnText.textContent = '📤 Enviando...';
+                    submitBtnText.textContent = '📤 Sending...';
                     submitSpinner.classList.remove('d-none');
 
                     const config = notificationConfigs[alertType][intensity];
@@ -839,36 +839,36 @@
                     const result = await response.json();
 
                     if (!response.ok) {
-                        throw new Error(result.error || 'Erro ao enviar notificação');
+                        throw new Error(result.error || 'Failed to send notification');
                     }
 
                     notificationsSent++;
                     document.getElementById('totalNotifications').textContent = notificationsSent;
                     
-                    showAlert(`✅ Notificação enviada com sucesso! (${result.sent} dispositivo(s))`, 'success');
+                    showAlert(`✅ Notification sent successfully! (${result.sent} device(s))`, 'success');
                     
                     if (customMessageCheckbox.checked) {
                         document.getElementById('title').value = '';
                         document.getElementById('message').value = '';
                     }
                 } catch (error) {
-                    console.error('Erro:', error);
-                    showAlert('❌ ' + (error.message || 'Erro ao enviar notificação'), 'danger');
+                    console.error('Error:', error);
+                    showAlert('❌ ' + (error.message || 'Failed to send notification'), 'danger');
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtnText.textContent = '🚀 Enviar Notificação de Teste';
+                    submitBtnText.textContent = '🚀 Send Test Notification';
                     submitSpinner.classList.add('d-none');
                 }
             }
 
-            // Mostra uma mensagem de alerta
+            // Show an alert message
             function showAlert(message, type) {
                 const alert = document.createElement('div');
                 alert.className = `alert alert-${type} alert-dismissible fade show`;
                 alert.role = 'alert';
                 alert.innerHTML = `
                     ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
                 
                 alertContainer.insertBefore(alert, alertContainer.firstChild);
@@ -879,7 +879,7 @@
                 }, 5000);
             }
 
-            // Manipula o envio do formulário
+            // Handle form submission
             document.getElementById('sendNotificationForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const userId = userIdInput.value;
@@ -889,27 +889,27 @@
                 const customMessage = customMessageCheckbox.checked ? document.getElementById('message').value : '';
                 
                 if (!userId) {
-                    showAlert('⚠️ Selecione um usuário primeiro', 'warning');
+                    showAlert('⚠️ Select a user first', 'warning');
                     return;
                 }
                 
                 if (customMessageCheckbox.checked && (!customTitle || !customMessage)) {
-                    showAlert('⚠️ Preencha título e mensagem personalizados', 'warning');
+                    showAlert('⚠️ Fill in the custom title and message', 'warning');
                     return;
                 }
                 
                 sendNotification(userId, alertType, intensity, customTitle, customMessage);
             });
 
-            // Event listeners para filtros
+            // Filter event listeners
             document.getElementById('filterEmail').addEventListener('input', filterUsers);
             document.getElementById('filterName').addEventListener('input', filterUsers);
             document.getElementById('filterCity').addEventListener('input', filterUsers);
             document.getElementById('filterDevice').addEventListener('change', filterUsers);
 
-            // Inicializa a página
+            // Initialize page
             loadUsers();
-            renderIntensityButtons('rain'); // Inicia com chuva
+            renderIntensityButtons('rain'); // Start with rain
         });
     </script>
 </body>

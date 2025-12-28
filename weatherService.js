@@ -51,12 +51,12 @@ function getUVLevel(uvIndex) {
  * Determina o nível de qualidade do ar
  */
 function getAirQualityLevel(aqi) {
-  if (aqi <= 20) return { level: 'good', shouldAlert: false, description: 'Boa' };
-  if (aqi <= 40) return { level: 'fair', shouldAlert: false, description: 'Razoável' };
-  if (aqi <= 60) return { level: 'moderate', shouldAlert: true, description: 'Moderada' };
-  if (aqi <= 80) return { level: 'poor', shouldAlert: true, description: 'Ruim' };
-  if (aqi <= 100) return { level: 'very_poor', shouldAlert: true, description: 'Muito Ruim' };
-  return { level: 'extremely_poor', shouldAlert: true, description: 'Extremamente Ruim' };
+  if (aqi <= 20) return { level: 'good', shouldAlert: false, description: 'Good' };
+  if (aqi <= 40) return { level: 'fair', shouldAlert: false, description: 'Fair' };
+  if (aqi <= 60) return { level: 'moderate', shouldAlert: true, description: 'Moderate' };
+  if (aqi <= 80) return { level: 'poor', shouldAlert: true, description: 'Poor' };
+  if (aqi <= 100) return { level: 'very_poor', shouldAlert: true, description: 'Very poor' };
+  return { level: 'extremely_poor', shouldAlert: true, description: 'Extremely poor' };
 }
 
 /**
@@ -65,8 +65,8 @@ function getAirQualityLevel(aqi) {
 function getWindLevel(windSpeed, windGusts) {
   const maxWind = Math.max(windSpeed, windGusts || 0);
   if (maxWind < 50) return { level: 'calm', shouldAlert: false };
-  if (maxWind < 70) return { level: 'strong', shouldAlert: true, description: 'Vento forte' };
-  return { level: 'very_strong', shouldAlert: true, description: 'Vento muito forte' };
+  if (maxWind < 70) return { level: 'strong', shouldAlert: true, description: 'Strong wind' };
+  return { level: 'very_strong', shouldAlert: true, description: 'Very strong wind' };
 }
 
 /**
@@ -77,7 +77,7 @@ function getWindLevel(windSpeed, windGusts) {
  */
 async function getWeatherAlerts(latitude, longitude) {
   try {
-    console.log(`🌍 Consultando dados para: ${latitude}, ${longitude}`);
+    console.log(`🌍 Fetching data for: ${latitude}, ${longitude}`);
     
     // Fazer requisições em paralelo
     const [weatherResponse, airQualityResponse] = await Promise.all([
@@ -107,7 +107,7 @@ async function getWeatherAlerts(latitude, longitude) {
       const level = getRainIntensityLevel(rain);
       alerts.push({
         type: 'rain_now', severity: level, value: rain,
-        message: `Está chovendo agora (${rain.toFixed(1)} mm)`,
+        message: `It's raining now (${rain.toFixed(1)} mm)`,
         shouldNotify: level !== 'none'
       });
     }
@@ -123,7 +123,7 @@ async function getWeatherAlerts(latitude, longitude) {
       const hour = next3h.indexOf(maxRain) + 1;
       alerts.push({
         type: 'rain_forecast', severity: level, value: maxRain, hoursAhead: hour,
-        message: `Chuva prevista em ${hour}h (${maxRain.toFixed(1)} mm)`,
+        message: `Rain expected in ${hour}h (${maxRain.toFixed(1)} mm)`,
         shouldNotify: level !== 'none'
       });
     }
@@ -134,7 +134,7 @@ async function getWeatherAlerts(latitude, longitude) {
     if (uvLevel.shouldAlert) {
       alerts.push({
         type: 'uv_high', severity: uvLevel.level, value: uv,
-        message: `Índice UV ${uvLevel.level === 'extreme' ? 'EXTREMO' : 'ALTO'}: ${uv.toFixed(1)}`,
+        message: `UV index ${uvLevel.level === 'extreme' ? 'EXTREME' : 'HIGH'}: ${uv.toFixed(1)}`,
         shouldNotify: true
       });
     }
@@ -147,7 +147,7 @@ async function getWeatherAlerts(latitude, longitude) {
         alerts.push({
           type: 'air_quality', severity: aqLevel.level, value: aqi,
           description: aqLevel.description,
-          message: `Qualidade do ar ${aqLevel.description} (AQI: ${aqi})`,
+          message: `Air quality ${aqLevel.description} (AQI: ${aqi})`,
           shouldNotify: true
         });
       }
@@ -174,7 +174,7 @@ async function getWeatherAlerts(latitude, longitude) {
       const hour = next3hGusts.indexOf(maxGusts) + 1;
       alerts.push({
         type: 'wind_forecast', severity: 'strong', value: maxGusts, hoursAhead: hour,
-        message: `Rajadas fortes previstas em ${hour}h (${maxGusts.toFixed(0)} km/h)`,
+        message: `Strong gusts expected in ${hour}h (${maxGusts.toFixed(0)} km/h)`,
         shouldNotify: true
       });
     }
@@ -187,7 +187,7 @@ async function getWeatherAlerts(latitude, longitude) {
     };
 
   } catch (error) {
-    console.error(`❌ Erro ao consultar API para ${latitude}, ${longitude}:`, error.message);
+    console.error(`❌ Error calling API for ${latitude}, ${longitude}:`, error.message);
     return null;
   }
 }
@@ -215,7 +215,7 @@ async function getUniqueLocations(db) {
 
     const { rows } = await db.query(query);
     
-    console.log(`📍 Encontradas ${rows.length} localizações únicas no banco de dados`);
+    console.log(`📍 Found ${rows.length} unique locations in the database`);
     
     return rows.map(row => ({
       latitude: parseFloat(row.rounded_lat),
@@ -225,7 +225,7 @@ async function getUniqueLocations(db) {
     }));
 
   } catch (error) {
-    console.error('❌ Erro ao buscar localizações únicas:', error);
+    console.error('❌ Error fetching unique locations:', error);
     return [];
   }
 }
@@ -239,23 +239,23 @@ async function checkAlertsForAllLocations(db) {
   const locations = await getUniqueLocations(db);
   
   if (locations.length === 0) {
-    console.log('❌ Nenhuma localização encontrada no banco de dados');
+    console.log('❌ No locations found in the database');
     return [];
   }
 
-  console.log(`\n🔍 Verificando alertas para ${locations.length} localizações...`);
-  console.log(`⏰ Horário: ${new Date().toLocaleString('pt-BR')}\n`);
+  console.log(`\n🔍 Checking alerts for ${locations.length} locations...`);
+  console.log(`⏰ Time: ${new Date().toLocaleString('en-US')}\n`);
   
   const locationAlerts = [];
   let processedCount = 0;
   
-  // Open-Meteo é gratuito, mas vamos ser educados e adicionar pequeno delay
-  const DELAY_MS = 100; // 100ms entre requisições
+  // Open-Meteo is free, but add a small delay to be polite
+  const DELAY_MS = 100; // 100ms between requests
   
   for (let i = 0; i < locations.length; i++) {
     const location = locations[i];
     
-    console.log(`[${i + 1}/${locations.length}] 📍 ${location.latitude}, ${location.longitude} (${location.userCount} usuários)`);
+    console.log(`[${i + 1}/${locations.length}] 📍 ${location.latitude}, ${location.longitude} (${location.userCount} users)`);
     
     const result = await getWeatherAlerts(location.latitude, location.longitude);
     
@@ -266,26 +266,26 @@ async function checkAlertsForAllLocations(db) {
         userCount: location.userCount
       });
       
-      console.log(`   ⚠️ ${result.alerts.length} alerta(s) detectado(s):`);
+      console.log(`   ⚠️ ${result.alerts.length} alert(s) detected:`);
       result.alerts.forEach(alert => {
         console.log(`      - ${alert.type}: ${alert.message}`);
       });
     } else if (result) {
-      console.log(`   ✅ Sem alertas`);
+      console.log('   ✅ No alerts');
     } else {
-      console.log(`   ❌ Erro ao consultar dados`);
+      console.log('   ❌ Error fetching data');
     }
     
     processedCount++;
     
-    // Pequeno delay entre requisições
+    // Small delay between requests
     if (i < locations.length - 1) {
       await new Promise(resolve => setTimeout(resolve, DELAY_MS));
     }
   }
   
-  console.log(`\n✅ Processamento concluído: ${processedCount}/${locations.length} localizações verificadas`);
-  console.log(`   Localizações com alertas: ${locationAlerts.length}`);
+  console.log(`\n✅ Processing completed: ${processedCount}/${locations.length} locations checked`);
+  console.log(`   Locations with alerts: ${locationAlerts.length}`);
   
   // Resumo de alertas por tipo
   const alertsByType = {};
@@ -296,7 +296,7 @@ async function checkAlertsForAllLocations(db) {
   });
   
   if (Object.keys(alertsByType).length > 0) {
-    console.log('\n📊 Resumo de alertas por tipo:');
+    console.log('\n📊 Alert summary by type:');
     Object.entries(alertsByType).forEach(([type, count]) => {
       console.log(`   ${type}: ${count}`);
     });

@@ -30,29 +30,29 @@ function getNotificationConfig(alert) {
   if (type === 'rain_now') {
     const rainConfigs = {
       light: {
-        title: '🌦️ Chuva Fraca se Aproximando',
-        body: `Chuva leve prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Leve um guarda-chuva!`,
+        title: '🌦️ Light Rain Approaching',
+        body: `Light rain expected in the next 30 minutes (${value.toFixed(1)} mm/h). Bring an umbrella!`,
         priority: 'normal',
         vibrationPattern: [200, 100, 200],
         sound: 'default'
       },
       moderate: {
-        title: '🌧️ Chuva Moderada se Aproximando',
-        body: `Chuva moderada prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Prepare-se!`,
+        title: '🌧️ Moderate Rain Approaching',
+        body: `Moderate rain expected in the next 30 minutes (${value.toFixed(1)} mm/h). Be prepared!`,
         priority: 'high',
         vibrationPattern: [300, 150, 300, 150, 300],
         sound: 'default'
       },
       heavy: {
-        title: '⛈️ CHUVA FORTE se Aproximando!',
-        body: `ATENÇÃO: Chuva forte prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). Busque abrigo!`,
+        title: '⛈️ HEAVY RAIN Approaching!',
+        body: `WARNING: Heavy rain expected in the next 30 minutes (${value.toFixed(1)} mm/h). Seek shelter!`,
         priority: 'high',
         vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
         sound: 'default'
       },
       extreme: {
-        title: '🚨 ALERTA: CHUVA EXTREMA!',
-        body: `ALERTA MÁXIMO: Chuva extrema prevista nos próximos 30 minutos (${value.toFixed(1)} mm/h). BUSQUE ABRIGO IMEDIATAMENTE!`,
+        title: '🚨 ALERT: EXTREME RAIN!',
+        body: `MAXIMUM ALERT: Extreme rain expected in the next 30 minutes (${value.toFixed(1)} mm/h). SEEK SHELTER IMMEDIATELY!`,
         priority: 'high',
         vibrationPattern: [500, 250, 500, 250, 500, 250, 500, 250, 500],
         sound: 'default'
@@ -65,22 +65,22 @@ function getNotificationConfig(alert) {
   if (type === 'air_quality') {
     const airConfigs = {
       moderate: {
-        title: '😷 Qualidade do Ar Moderada',
-        body: message || `Qualidade do ar moderada (AQI: ${Math.round(value)}). Pessoas sensíveis devem considerar reduzir atividades ao ar livre.`,
+        title: '😷 Moderate Air Quality',
+        body: message || `Moderate air quality (AQI: ${Math.round(value)}). Sensitive individuals should consider reducing outdoor activities.`,
         priority: 'normal',
         vibrationPattern: [200, 100, 200],
         sound: 'default'
       },
       poor: {
-        title: '⚠️ Qualidade do Ar Ruim',
-        body: message || `Qualidade do ar ruim (AQI: ${Math.round(value)}). Evite atividades prolongadas ao ar livre.`,
+        title: '⚠️ Poor Air Quality',
+        body: message || `Poor air quality (AQI: ${Math.round(value)}). Avoid prolonged outdoor activities.`,
         priority: 'high',
         vibrationPattern: [300, 150, 300, 150, 300],
         sound: 'default'
       },
       very_poor: {
-        title: '🚨 Qualidade do Ar Muito Ruim',
-        body: message || `ALERTA: Qualidade do ar muito ruim (AQI: ${Math.round(value)}). Evite sair de casa!`,
+        title: '🚨 Very Poor Air Quality',
+        body: message || `ALERT: Very poor air quality (AQI: ${Math.round(value)}). Avoid going outside!`,
         priority: 'high',
         vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
         sound: 'default'
@@ -93,15 +93,15 @@ function getNotificationConfig(alert) {
   if (type === 'wind') {
     const windConfigs = {
       strong: {
-        title: '💨 Vento Forte',
-        body: message || `Vento forte detectado (${Math.round(value)} km/h). Tenha cuidado ao ar livre.`,
+        title: '💨 Strong Wind',
+        body: message || `Strong wind detected (${Math.round(value)} km/h). Use caution outdoors.`,
         priority: 'high',
         vibrationPattern: [300, 150, 300, 150, 300],
         sound: 'default'
       },
       very_strong: {
-        title: '🌪️ Vento Muito Forte',
-        body: message || `ALERTA: Vento muito forte (${Math.round(value)} km/h). Evite áreas abertas!`,
+        title: '🌪️ Very Strong Wind',
+        body: message || `ALERT: Very strong wind (${Math.round(value)} km/h). Avoid open areas!`,
         priority: 'high',
         vibrationPattern: [400, 200, 400, 200, 400, 200, 400],
         sound: 'default'
@@ -113,8 +113,8 @@ function getNotificationConfig(alert) {
   // Configurações para alertas de UV
   if (type === 'uv_high') {
     return {
-      title: '☀️ Índice UV Alto',
-      body: message || `Índice UV alto (${Math.round(value)}). Use protetor solar e evite exposição prolongada ao sol.`,
+      title: '☀️ High UV Index',
+      body: message || `High UV index (${Math.round(value)}). Use sunscreen and avoid prolonged sun exposure.`,
       priority: 'normal',
       vibrationPattern: [200, 100, 200],
       sound: 'default'
@@ -125,15 +125,15 @@ function getNotificationConfig(alert) {
   if (type === 'temperature') {
     const tempConfigs = {
       high: {
-        title: '🌡️ Temperatura Elevada',
-        body: message || `Temperatura elevada (${Math.round(value)}°C). Mantenha-se hidratado!`,
+        title: '🌡️ High Temperature',
+        body: message || `High temperature (${Math.round(value)}°C). Stay hydrated!`,
         priority: 'normal',
         vibrationPattern: [200, 100, 200],
         sound: 'default'
       },
       low: {
-        title: '❄️ Temperatura Baixa',
-        body: message || `Temperatura baixa (${Math.round(value)}°C). Agasalhe-se bem!`,
+        title: '❄️ Low Temperature',
+        body: message || `Low temperature (${Math.round(value)}°C). Dress warmly!`,
         priority: 'normal',
         vibrationPattern: [200, 100, 200],
         sound: 'default'
@@ -144,8 +144,8 @@ function getNotificationConfig(alert) {
   
   // Configuração padrão para tipos desconhecidos
   return {
-    title: '⚠️ Alerta Meteorológico',
-    body: message || `Alerta detectado: ${type} (${severity})`,
+    title: '⚠️ Weather Alert',
+    body: message || `Alert detected: ${type} (${severity})`,
     priority: 'normal',
     vibrationPattern: [200, 100, 200],
     sound: 'default'
@@ -165,9 +165,9 @@ async function removeInvalidTokens(db, invalidTokens) {
     const query = `DELETE FROM devices WHERE token IN (${placeholders})`;
     
     const result = await db.query(query, invalidTokens);
-    console.log(`🗑️ Removidos ${result.rowCount} token(s) inválido(s) do banco de dados`);
+    console.log(`🗑️ Removed ${result.rowCount} invalid token(s) from the database`);
   } catch (error) {
-    console.error('Erro ao remover tokens inválidos:', error);
+    console.error('Error removing invalid tokens:', error);
   }
 }
 
@@ -202,13 +202,13 @@ async function isUserAlertInCooldown(db, userId, latitude, longitude, alertType)
       const lastNotification = new Date(rows[0].last_notification_at);
       const minutesAgo = Math.floor((Date.now() - lastNotification.getTime()) / 1000 / 60);
       const hoursAgo = (minutesAgo / 60).toFixed(1);
-      console.log(`⏳ Usuário ${userId} em cooldown para ${roundedLat}, ${roundedLon} (${alertType}: última há ${hoursAgo}h, cooldown: ${cooldownHours}h)`);
+      console.log(`⏳ User ${userId} in cooldown for ${roundedLat}, ${roundedLon} (${alertType}: last ${hoursAgo}h ago, cooldown: ${cooldownHours}h)`);
       return true;
     }
     
     return false;
   } catch (error) {
-    console.error('Erro ao verificar cooldown:', error);
+    console.error('Error checking cooldown:', error);
     return false; // Em caso de erro, permite enviar notificação
   }
 }
@@ -240,9 +240,9 @@ async function recordNotificationSent(db, userId, latitude, longitude, alertType
     `;
     
     await db.query(query, [userId, roundedLat, roundedLon, alertType, severity, alertValue]);
-    console.log(`📝 Cooldown registrado para usuário ${userId} em ${roundedLat}, ${roundedLon} (${alertType}, severity: ${severity}, value: ${alertValue})`);
+    console.log(`📝 Cooldown recorded for user ${userId} at ${roundedLat}, ${roundedLon} (${alertType}, severity: ${severity}, value: ${alertValue})`);
   } catch (error) {
-    console.error('Erro ao registrar cooldown:', error);
+    console.error('Error recording cooldown:', error);
   }
 }
 
@@ -278,7 +278,7 @@ async function getDeviceTokensForUsers(db, userUids) {
     }));
 
   } catch (error) {
-    console.error('Erro ao buscar tokens de dispositivos:', error);
+    console.error('Error fetching device tokens:', error);
     return [];
   }
 }
@@ -293,7 +293,7 @@ async function getDeviceTokensForUsers(db, userUids) {
  */
 async function sendAlertNotification(tokens, alert, location, db) {
   if (!tokens || tokens.length === 0) {
-    console.log('Nenhum token disponível para enviar notificação');
+    console.log('No tokens available to send notification');
     return { successCount: 0, failureCount: 0, invalidTokens: [] };
   }
 
@@ -335,14 +335,14 @@ async function sendAlertNotification(tokens, alert, location, db) {
       }
     };
 
-    console.log(`📤 Enviando ${alert.type} (${alert.severity}) para ${tokens.length} dispositivo(s)...`);
+    console.log(`📤 Sending ${alert.type} (${alert.severity}) to ${tokens.length} device(s)...`);
     
     const response = await admin.messaging().sendEachForMulticast({
       ...message,
       tokens: tokens
     });
 
-    console.log(`✅ Notificações enviadas: ${response.successCount} sucesso, ${response.failureCount} falhas`);
+    console.log(`✅ Notifications sent: ${response.successCount} success, ${response.failureCount} failures`);
     
     // Identificar e remover tokens inválidos
     const invalidTokens = [];
@@ -350,7 +350,7 @@ async function sendAlertNotification(tokens, alert, location, db) {
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
           const errorCode = resp.error?.code;
-          console.error(`Erro no token ${idx + 1}:`, errorCode, resp.error?.message);
+          console.error(`Error for token ${idx + 1}:`, errorCode, resp.error?.message);
           
           // Tokens que devem ser removidos do banco
           if (errorCode === 'messaging/registration-token-not-registered' ||
@@ -375,7 +375,7 @@ async function sendAlertNotification(tokens, alert, location, db) {
     };
 
   } catch (error) {
-    console.error('Erro ao enviar notificação:', error);
+    console.error('Error sending notification:', error);
     return { successCount: 0, failureCount: tokens.length, invalidTokens: [], error: error.message };
   }
 }
@@ -388,11 +388,11 @@ async function sendAlertNotification(tokens, alert, location, db) {
  */
 async function processWeatherAlerts(db, locationAlerts) {
   if (!locationAlerts || locationAlerts.length === 0) {
-    console.log('✅ Nenhum alerta para processar');
+    console.log('✅ No alerts to process');
     return { totalNotifications: 0, alertsByType: {}, results: [] };
   }
 
-  console.log(`\n📬 Processando alertas para ${locationAlerts.length} localização(ões)...`);
+  console.log(`\n📬 Processing alerts for ${locationAlerts.length} location(s)...`);
   
   const results = [];
   let totalSuccessCount = 0;
@@ -401,13 +401,13 @@ async function processWeatherAlerts(db, locationAlerts) {
 
   for (const locationData of locationAlerts) {
     console.log(`\n--- 📍 ${locationData.latitude}, ${locationData.longitude} ---`);
-    console.log(`Alertas: ${locationData.alerts.length} | Usuários: ${locationData.userCount}`);
+    console.log(`Alerts: ${locationData.alerts.length} | Users: ${locationData.userCount}`);
 
     // Obter tokens dos usuários
     const userDevices = await getDeviceTokensForUsers(db, locationData.userUids);
     
     if (userDevices.length === 0) {
-      console.log('⚠️ Nenhum dispositivo registrado');
+      console.log('⚠️ No registered devices');
       continue;
     }
 
@@ -433,10 +433,10 @@ async function processWeatherAlerts(db, locationAlerts) {
         }
       }
 
-      console.log(`  📱 ${devicesToNotify.length} para notificar, ${skipped} em cooldown`);
+      console.log(`  📱 ${devicesToNotify.length} to notify, ${skipped} in cooldown`);
 
       if (devicesToNotify.length === 0) {
-        console.log('  ⏭️ Todos em cooldown');
+        console.log('  ⏭️ All in cooldown');
         continue;
       }
 
